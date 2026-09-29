@@ -51,6 +51,21 @@ The send slot can turn into a Stop control while generation is active. Earlier l
 
 Public implementations also show toolbars can live outside the editor's immediate form, so placement performs a bounded ancestor search rather than assuming controls are form descendants.
 
+Trailing/footer areas:
+
+- `[data-testid="composer-trailing-actions"]`
+- `[data-testid="composer-footer-actions"]`
+- `[data-testid="composer-actions"]`
+- `[data-composer-trailing]` — **observed live 2026-09-29**
+
+### September 29 live DOM observations
+
+Live unauthenticated inspection of `chatgpt.com` (2026-09-29) revealed:
+
+- The unauthenticated form uses `form[data-mobile-composer]` with `textarea[data-mobile-composer-prompt]` (`#mobile-composer-prompt`). Authenticated sessions are expected to use `form[data-chatgpt-composer]` with `div#prompt-textarea.ProseMirror`.
+- The trailing control row uses `[data-composer-trailing]` (not the older `data-testid="composer-trailing-actions"`).
+- The send/stop button is now a **single unified element** carrying both `data-send-label="Send message"` and `data-stop-label="Stop generating"` as permanent attributes. The active state is determined by `aria-label` switching between the two labels. The `looksLikeStop` function was updated to prioritize `aria-label` (and `data-testid`) over `data-stop-label` to avoid false-positive Stop classification.
+
 ## Conversation/message signals
 
 - `[data-message-author-role="assistant"]`
