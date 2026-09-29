@@ -11,12 +11,15 @@
   const ROOT_ATTR = 'data-chatgpt-rtl-mode';
   const HOST_ID = 'chatgpt-rtl-toggle-host';
   const TOGGLE_MESSAGE = 'chatgpt-rtl:toggle';
+  const CONTENT_SCAN_DELAY_MS = 40;
+  const PLACEMENT_DELAY_MS = 120;
 
   const BUTTON_CSS = `
     :host{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;color:inherit;font:inherit;z-index:2147483647}
     :host([data-placement="floating"]){position:fixed;right:20px;bottom:92px}
     button{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0 4px 0 0;border:0;border-radius:999px;background:transparent;color:inherit;cursor:pointer;opacity:.78;transition:background-color 120ms ease,opacity 120ms ease}
-    button:hover,button:focus-visible{background:color-mix(in srgb,currentColor 10%,transparent);opacity:1;outline:2px solid color-mix(in srgb,currentColor 35%,transparent);outline-offset:2px}
+    button:hover{background:color-mix(in srgb,currentColor 10%,transparent);opacity:1}
+    button:focus-visible{background:color-mix(in srgb,currentColor 10%,transparent);opacity:1;outline:2px solid color-mix(in srgb,currentColor 35%,transparent);outline-offset:2px}
     svg{width:17px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;transition:transform 180ms ease}
     button[data-mode="rtl"] svg{transform:scaleX(-1)}
     :host([data-placement="floating"]) button{margin:0;background:Canvas;color:CanvasText;box-shadow:0 1px 7px rgb(0 0 0 / 20%);opacity:.96}
@@ -25,6 +28,7 @@
 
   const state = {
     mode: 'rtl',
+    updatedAt: 0,
     host: null,
     composer: null,
     composerForm: null,
@@ -32,34 +36,61 @@
     anchor: null,
     observer: null,
     resizeObserver: null,
-    refreshTimer: null,
+    placementTimer: null,
+    contentTimer: null,
+    contentQueue: new Set(),
+    fullScanRequested: false,
   };
 
+  function normalizeStored(value) {
+    if (value === 'rtl' || value === 'ltr') return { mode: value, updatedAt: 0 };
+    if (!value || typeof value !== 'object') return null;
+    const mode = value.mode;
+    const updatedAt = Number(value.updatedAt || 0);
+    if ((mode !== 'rtl' && mode !== 'ltr') || !Number.isFinite(updatedAt) || updatedAt < 0) return null;
+    return { mode, updatedAt };
+  }
+
+  function sameRecord(a, b) {
+    return Boolean(a && b && a.mode === b.mode && a.updatedAt === b.updatedAt);
+  }
+
+  async function readArea(area) {
+    try {
+      const result = await chrome.storage[area].get(STORAGE_KEY);
+      return normalizeStored(result?.[STORAGE_KEY]);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function writeArea(area, record) {
+    try {
+      await chrome.storage[area].set({ [STORAGE_KEY]: record });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function loadMode() {
-    try {
-      const sync = await chrome.storage.sync.get(STORAGE_KEY);
-      if (sync[STORAGE_KEY] === 'rtl' || sync[STORAGE_KEY] === 'ltr') {
-        state.mode = sync[STORAGE_KEY];
-        return;
-      }
-    } catch (_) {}
+    const [sync, local] = await Promise.all([readArea('sync'), readArea('local')]);
+    const candidates = [sync, local].filter(Boolean);
+    const chosen = candidates.sort((a, b) => b.updatedAt - a.updatedAt)[0] || { mode: 'rtl', updatedAt: 0 };
+    state.mode = chosen.mode;
+    state.updatedAt = chosen.updatedAt;
 
-    try {
-      const local = await chrome.storage.local.get(STORAGE_KEY);
-      if (local[STORAGE_KEY] === 'rtl' || local[STORAGE_KEY] === 'ltr') {
-        state.mode = local[STORAGE_KEY];
-        return;
-      }
-    } catch (_) {}
-
-    state.mode = 'rtl';
+    const record = { mode: state.mode, updatedAt: state.updatedAt };
+    if (!sameRecord(sync, record)) void writeArea('sync', record);
+    if (!sameRecord(local, record)) void writeArea('local', record);
   }
 
   async function saveMode(mode) {
-    await Promise.allSettled([
-      chrome.storage.sync.set({ [STORAGE_KEY]: mode }),
-      chrome.storage.local.set({ [STORAGE_KEY]: mode }),
-    ]);
+    const record = { mode, updatedAt: Date.now() };
+    state.mode = mode;
+    state.updatedAt = record.updatedAt;
+    await Promise.allSettled([writeArea('sync', record), writeArea('local', record)]);
+    return record;
   }
 
   function reflectButton() {
@@ -74,7 +105,11 @@
 
   function makeHost() {
     let host = document.getElementById(HOST_ID);
-    if (host) { state.host = host; return host; }
+    if (host) {
+      state.host = host;
+      reflectButton();
+      return host;
+    }
 
     host = document.createElement('span');
     host.id = HOST_ID;
@@ -127,9 +162,11 @@
     clearResizeObserver();
     if (!composer || typeof ResizeObserver === 'undefined') return;
     try {
-      state.resizeObserver = new ResizeObserver(() => scheduleRefresh(100));
+      state.resizeObserver = new ResizeObserver(() => schedulePlacement(80));
       state.resizeObserver.observe(composer);
-    } catch (_) { state.resizeObserver = null; }
+    } catch (_) {
+      state.resizeObserver = null;
+    }
   }
 
   function placeHost() {
@@ -140,11 +177,12 @@
     if (composer) {
       const scope = core.composerScope(composer, form);
       const send = core.getSend(scope);
+      const stop = core.getStop(scope);
       const trailing = core.getTrailing(scope);
       const trailingAnchor = trailing
-        ? core.qsa(trailing, 'button,[role="button"]').find((el) => core.visible(el) && !core.looksLikeStop(el))
+        ? core.qsa(trailing, 'button,[role="button"]').find((el) => core.visible(el))
         : null;
-      const anchor = send || trailingAnchor || core.fallbackAnchor(scope, composer);
+      const anchor = send || stop || trailingAnchor || core.fallbackAnchor(scope, composer);
       const parent = anchor?.parentElement;
 
       markComposer(composer);
@@ -185,9 +223,35 @@
     return false;
   }
 
-  function scheduleRefresh(delay = 180) {
-    clearTimeout(state.refreshTimer);
-    state.refreshTimer = setTimeout(placeHost, delay);
+  function schedulePlacement(delay = PLACEMENT_DELAY_MS) {
+    clearTimeout(state.placementTimer);
+    state.placementTimer = setTimeout(placeHost, delay);
+  }
+
+  function reduceQueuedRoots(nodes) {
+    const connected = nodes.filter((node) => node?.isConnected);
+    return connected.filter((node, index) => !connected.some((other, otherIndex) =>
+      otherIndex !== index && other instanceof Element && node instanceof Element && other.contains(node)
+    ));
+  }
+
+  function flushContentQueue() {
+    state.contentTimer = null;
+    const full = state.fullScanRequested;
+    state.fullScanRequested = false;
+    const nodes = reduceQueuedRoots([...state.contentQueue]);
+    state.contentQueue.clear();
+
+    if (full) core.scanConversation(document);
+    for (const node of nodes) core.scanAdded(node);
+  }
+
+  function queueContent(node, { full = false } = {}) {
+    if (full) state.fullScanRequested = true;
+    const element = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    if (element instanceof Element) state.contentQueue.add(element);
+    if (state.contentTimer) return;
+    state.contentTimer = setTimeout(flushContentQueue, CONTENT_SCAN_DELAY_MS);
   }
 
   function removedLivePlacement(node) {
@@ -210,41 +274,54 @@
 
     for (const mutation of mutations) {
       if (mutation.type === 'characterData') {
-        core.scanAdded(mutation.target.parentElement);
+        queueContent(mutation.target);
         continue;
       }
 
       if (mutation.type === 'attributes') {
         if (placementAttributeChanged(mutation.target)) placementChanged = true;
+        if (mutation.target.closest?.(core.TURN_SELECTOR) || core.hasConversationSignal(mutation.target)) {
+          queueContent(mutation.target);
+        }
         continue;
       }
 
       if (mutation.type !== 'childList') continue;
 
       for (const node of mutation.addedNodes) {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          core.scanAdded(node);
+        if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) queueContent(node);
+        if (node instanceof Element) {
           if (core.hasPlacementSignal(node)) placementChanged = true;
-        } else if (node.nodeType === Node.TEXT_NODE) {
-          core.scanAdded(node.parentElement);
+          if (!state.host && core.hasConversationSignal(node)) placementChanged = true;
         }
       }
 
       for (const node of mutation.removedNodes) {
+        if (!(node instanceof Element)) continue;
         if (removedLivePlacement(node) || core.hasPlacementSignal(node)) placementChanged = true;
+        if (state.host?.dataset.placement === 'floating' && core.hasConversationSignal(node)) placementChanged = true;
       }
     }
 
-    if (placementChanged) scheduleRefresh();
+    if (placementChanged) schedulePlacement();
   }
 
   function listenStorage() {
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== 'sync' && area !== 'local') return;
-      const next = changes[STORAGE_KEY]?.newValue;
-      if (next !== 'rtl' && next !== 'ltr') return;
-      applyMode(next);
-      if (area === 'sync') void chrome.storage.local.set({ [STORAGE_KEY]: next }).catch(() => {});
+      const record = normalizeStored(changes[STORAGE_KEY]?.newValue);
+      if (!record) return;
+      if (record.updatedAt < state.updatedAt) return;
+      if (record.updatedAt === state.updatedAt && record.mode === state.mode) return;
+
+      state.updatedAt = record.updatedAt;
+      applyMode(record.mode);
+
+      const mirrorArea = area === 'sync' ? 'local' : 'sync';
+      void readArea(mirrorArea).then((current) => {
+        if (!sameRecord(current, record)) return writeArea(mirrorArea, record);
+        return undefined;
+      });
     });
   }
 
@@ -254,6 +331,11 @@
       void toggleMode().then((mode) => sendResponse?.({ mode }));
       return true;
     });
+  }
+
+  function handleNavigation() {
+    queueContent(document.documentElement, { full: true });
+    schedulePlacement(0);
   }
 
   async function init() {
@@ -272,20 +354,22 @@
         'data-mobile-composer', 'data-composer-markdown', 'data-turn-key',
         'data-content-search-unit-key', 'data-chatgpt-search-unit-key',
         'data-user-message-bubble', 'data-markdown-text-style',
-        'data-message-author-role', 'data-turn', 'aria-label', 'aria-disabled',
-        'disabled', 'contenteditable', 'role', 'id',
+        'data-message-author-role', 'data-turn', 'data-math', 'data-math-source',
+        'data-language', 'aria-label', 'aria-disabled', 'aria-hidden', 'aria-live',
+        'disabled', 'hidden', 'contenteditable', 'role', 'id',
       ],
       subtree: true,
     });
 
-    window.addEventListener('popstate', () => scheduleRefresh(0), { passive: true });
-    window.addEventListener('hashchange', () => scheduleRefresh(0), { passive: true });
-    window.addEventListener('pageshow', () => scheduleRefresh(0), { passive: true });
-    window.addEventListener('resize', () => scheduleRefresh(100), { passive: true });
-    window.navigation?.addEventListener('navigate', () => scheduleRefresh(0));
+    window.addEventListener('popstate', handleNavigation, { passive: true });
+    window.addEventListener('hashchange', handleNavigation, { passive: true });
+    window.addEventListener('pageshow', handleNavigation, { passive: true });
+    window.addEventListener('resize', () => schedulePlacement(80), { passive: true });
+    window.navigation?.addEventListener('navigate', handleNavigation);
     document.addEventListener('focusin', (event) => {
-      if (event.target instanceof Element && core.EDITORS.some((selector) => event.target.matches(selector)) && core.likelyEditor(event.target, core.getComposerForm())) {
-        scheduleRefresh(0);
+      if (!(event.target instanceof Element)) return;
+      if (core.EDITORS.some((selector) => event.target.matches(selector)) && core.likelyEditor(event.target, core.getComposerForm())) {
+        schedulePlacement(0);
       }
     }, true);
 
