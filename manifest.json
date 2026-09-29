@@ -25,7 +25,8 @@
         "https://chat.openai.com/*"
       ],
       "js": [
-        "content.js"
+        "core.js",
+        "ui.js"
       ],
       "css": [
         "styles.css"

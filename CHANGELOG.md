@@ -3,6 +3,7 @@
 ## 0.4.0 — 2026-09-29
 
 - Added support for the post-September 26, 2026 ChatGPT `section[data-turn="user|assistant"]` turn-shell rewrite.
+- Split runtime into `core.js` (DOM/prose adapters) and `ui.js` (state/control/observers) so selector hardening and UI placement can evolve independently.
 - Added current/legacy composer and send-control fallbacks, including toolbars outside the composer form.
 - Added Stop-button transition handling and structural MutationObserver filtering.
 - Added conservative exclusions for status/citation/attachment/tool UI inside conversation turns.

@@ -1,197 +1,134 @@
 /*
- * ChatGPT RTL — conversation-only direction rules.
- * The application shell/sidebar is deliberately untouched.
+ * ChatGPT RTL — conversation/composer direction only.
+ * The surrounding ChatGPT application shell is deliberately untouched.
+ *
+ * Runtime-owned data attributes are used for conversation content instead of
+ * broad descendant selectors. That matters because modern ChatGPT embeds
+ * citations, tool/status UI, files, controls and other non-prose nodes inside
+ * conversation turns.
  */
 
-/* JS marks known prose containers and fallback user text blocks. */
+/* Prose leaves/wrappers positively identified by content.js. */
 html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-text="1"] {
   direction: rtl !important;
   text-align: right !important;
+  unicode-bidi: isolate;
+}
+html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-text="1"] {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate;
 }
 
-/* Current + legacy ChatGPT message shapes. These make the extension useful even
- * if JS marking misses a newly introduced wrapper class. */
-html[data-chatgpt-rtl-mode="rtl"] :is(
-  [data-message-author-role],
-  [data-turn-key],
-  [data-content-search-unit-key],
-  [data-chatgpt-search-unit-key],
-  article[data-turn],
-  [data-testid^="conversation-turn"]
-) :is(
-  .markdown,
-  .prose,
-  .whitespace-pre-wrap,
-  [data-testid="user-message"],
-  p,
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  blockquote,
-  dt,
-  dd,
-  figcaption,
-  summary
-) {
+/* The runtime marks whichever editor it positively identifies as the main
+ * composer. This also covers future no-form / sibling-toolbar layouts. */
+html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-composer="1"] {
   direction: rtl !important;
   text-align: right !important;
+  unicode-bidi: plaintext;
+}
+html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-composer="1"] {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: plaintext;
 }
 
-/* Composer — stable IDs/testids can be targeted directly. */
+/* Stable editor signals provide a harmless extra fallback if the runtime is a
+ * moment late during a SPA transition. */
 html[data-chatgpt-rtl-mode="rtl"] :is(
+  [data-composer-markdown][contenteditable="true"],
   [data-testid="prompt-textarea"],
   #prompt-textarea,
   textarea[data-mobile-composer-prompt],
-  #mobile-composer-prompt
+  #mobile-composer-prompt,
+  textarea[name="prompt"]
 ) {
   direction: rtl !important;
   text-align: right !important;
+  unicode-bidi: plaintext;
 }
-
-/* Broad contenteditable fallbacks are scoped to known composer forms so a future
- * sidebar/search textbox is not accidentally flipped. */
-html[data-chatgpt-rtl-mode="rtl"] :is(
-  form[data-chatgpt-composer],
-  form[data-type="unified-composer"],
-  form[data-mobile-composer]
-) :is(
+html[data-chatgpt-rtl-mode="ltr"] :is(
   [data-composer-markdown][contenteditable="true"],
-  textarea[name="prompt"],
-  [contenteditable="true"][role="textbox"],
-  [contenteditable="true"][data-lexical-editor="true"],
-  textarea[data-testid*="prompt"]
+  [data-testid="prompt-textarea"],
+  #prompt-textarea,
+  textarea[data-mobile-composer-prompt],
+  #mobile-composer-prompt,
+  textarea[name="prompt"]
 ) {
-  direction: rtl !important;
-  text-align: right !important;
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: plaintext;
 }
 
-/* ChatGPT's inline "edit message" UI lives inside a conversation turn rather
- * than the main composer. It should follow the selected direction too. */
+/* Inline user-message editing lives inside a turn rather than the main composer. */
 html[data-chatgpt-rtl-mode="rtl"] :is(
   [data-message-author-role="user"],
+  [data-turn="user"],
   [data-content-search-unit-key$=":user"],
   [data-chatgpt-search-unit-key$=":user"]
 ) [contenteditable="true"][role="textbox"] {
   direction: rtl !important;
   text-align: right !important;
+  unicode-bidi: plaintext;
+}
+html[data-chatgpt-rtl-mode="ltr"] :is(
+  [data-message-author-role="user"],
+  [data-turn="user"],
+  [data-content-search-unit-key$=":user"],
+  [data-chatgpt-search-unit-key$=":user"]
+) [contenteditable="true"][role="textbox"] {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: plaintext;
 }
 
-/* Lists: logical indentation keeps markers on the RTL side, including nesting. */
-html[data-chatgpt-rtl-mode="rtl"] :is(
-  [data-message-author-role],
-  [data-turn-key],
-  [data-content-search-unit-key],
-  [data-chatgpt-search-unit-key],
-  article[data-turn],
-  [data-testid^="conversation-turn"]
-) :is(ul, ol) {
+/* Lists are marked only when they belong to known message-prose roots. Logical
+ * indentation keeps markers on the correct side and nests cleanly. */
+html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-list="1"] {
   direction: rtl !important;
   text-align: right !important;
   padding-inline-start: 1.65rem !important;
   padding-inline-end: 0 !important;
 }
-
-html[data-chatgpt-rtl-mode="rtl"] :is(
-  [data-message-author-role],
-  [data-turn-key],
-  [data-content-search-unit-key],
-  [data-chatgpt-search-unit-key],
-  article[data-turn],
-  [data-testid^="conversation-turn"]
-) li {
-  direction: rtl !important;
+html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-list="1"] {
+  direction: ltr !important;
+  text-align: left !important;
+  padding-inline-start: 1.65rem !important;
+  padding-inline-end: 0 !important;
+}
+html:is([data-chatgpt-rtl-mode="rtl"], [data-chatgpt-rtl-mode="ltr"])
+  [data-chatgpt-rtl-list="1"] > li {
   text-align: start !important;
 }
 
-/* Technical content must preserve its natural LTR ordering, but only inside
- * conversation turns. Never rewrite code-like UI elsewhere in ChatGPT. */
-html[data-chatgpt-rtl-mode="rtl"] :is(
-  [data-message-author-role],
-  [data-turn-key],
-  [data-content-search-unit-key],
-  [data-chatgpt-search-unit-key],
-  article[data-turn],
-  [data-testid^="conversation-turn"]
-) :is(pre, code, kbd, samp, var) {
+/* Technical islands always preserve natural LTR ordering in either mode. */
+html:is([data-chatgpt-rtl-mode="rtl"], [data-chatgpt-rtl-mode="ltr"])
+  [data-chatgpt-rtl-technical="1"] {
   direction: ltr !important;
   text-align: left !important;
   unicode-bidi: isolate !important;
+  writing-mode: horizontal-tb !important;
 }
 
-/* ChatGPT currently uses KaTeX/data-math-source; keep broad fallbacks for MathJax,
- * again scoped to conversation content only. */
-html[data-chatgpt-rtl-mode="rtl"] :is(
-  [data-message-author-role],
-  [data-turn-key],
-  [data-content-search-unit-key],
-  [data-chatgpt-search-unit-key],
-  article[data-turn],
-  [data-testid^="conversation-turn"]
-) :is(
-  .katex,
-  .katex-display,
-  [class*="katex"],
-  .MathJax,
-  mjx-container,
-  [data-math],
-  [data-math-source],
-  [role="math"],
-  math
-) {
-  direction: ltr !important;
-  text-align: left !important;
-  unicode-bidi: isolate !important;
-}
-
-/* Preserve markdown table column order. Only cell prose becomes RTL. */
-html[data-chatgpt-rtl-mode="rtl"] :is(
-  [data-message-author-role],
-  [data-turn-key],
-  [data-content-search-unit-key],
-  [data-chatgpt-search-unit-key],
-  article[data-turn],
-  [data-testid^="conversation-turn"]
-) table {
+/* Preserve markdown table column order. Only table cells follow the selected
+ * text direction, and only tables positively identified inside prose are touched. */
+html:is([data-chatgpt-rtl-mode="rtl"], [data-chatgpt-rtl-mode="ltr"])
+  [data-chatgpt-rtl-table="1"] {
   direction: ltr !important;
   text-align: left !important;
 }
-
-html[data-chatgpt-rtl-mode="rtl"] :is(
-  [data-message-author-role],
-  [data-turn-key],
-  [data-content-search-unit-key],
-  [data-chatgpt-search-unit-key],
-  article[data-turn],
-  [data-testid^="conversation-turn"]
-) :is(th, td, caption) {
+html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-table="1"] :is(th, td, caption) {
   direction: rtl !important;
   text-align: right !important;
 }
-
-/* Links resolve their own base direction from visible text: a raw URL stays LTR,
- * while a Hebrew link label remains RTL. */
-html[data-chatgpt-rtl-mode="rtl"] :is(
-  [data-message-author-role],
-  [data-turn-key],
-  [data-content-search-unit-key],
-  [data-chatgpt-search-unit-key],
-  article[data-turn],
-  [data-testid^="conversation-turn"]
-) a {
-  unicode-bidi: plaintext;
+html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-table="1"] :is(th, td, caption) {
+  direction: ltr !important;
+  text-align: left !important;
 }
 
-/* Keep embedded UI controls from inheriting prose direction. */
-html[data-chatgpt-rtl-mode="rtl"] :is(
-  [data-message-author-role],
-  [data-turn-key],
-  [data-content-search-unit-key],
-  [data-chatgpt-search-unit-key],
-  article[data-turn],
-  [data-testid^="conversation-turn"]
-) :is(button, [role="button"]) {
+/* Isolate links and explicit bidi islands so raw URLs/emails do not scramble
+ * surrounding Hebrew/Arabic punctuation. */
+html:is([data-chatgpt-rtl-mode="rtl"], [data-chatgpt-rtl-mode="ltr"])
+  [data-chatgpt-rtl-island="1"] {
   unicode-bidi: isolate;
 }

@@ -1,0 +1,297 @@
+(() => {
+  'use strict';
+
+  if (globalThis.__CHATGPT_RTL_UI_LOADED__) return;
+  globalThis.__CHATGPT_RTL_UI_LOADED__ = true;
+
+  const core = globalThis.__CHATGPT_RTL_CORE__;
+  if (!core) return;
+
+  const STORAGE_KEY = 'chatgpt_rtl_mode';
+  const ROOT_ATTR = 'data-chatgpt-rtl-mode';
+  const HOST_ID = 'chatgpt-rtl-toggle-host';
+  const TOGGLE_MESSAGE = 'chatgpt-rtl:toggle';
+
+  const BUTTON_CSS = `
+    :host{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;color:inherit;font:inherit;z-index:2147483647}
+    :host([data-placement="floating"]){position:fixed;right:20px;bottom:92px}
+    button{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0 4px 0 0;border:0;border-radius:999px;background:transparent;color:inherit;cursor:pointer;opacity:.78;transition:background-color 120ms ease,opacity 120ms ease}
+    button:hover,button:focus-visible{background:color-mix(in srgb,currentColor 10%,transparent);opacity:1;outline:2px solid color-mix(in srgb,currentColor 35%,transparent);outline-offset:2px}
+    svg{width:17px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;transition:transform 180ms ease}
+    button[data-mode="rtl"] svg{transform:scaleX(-1)}
+    :host([data-placement="floating"]) button{margin:0;background:Canvas;color:CanvasText;box-shadow:0 1px 7px rgb(0 0 0 / 20%);opacity:.96}
+    @media(prefers-reduced-motion:reduce){button,svg{transition:none}}
+  `;
+
+  const state = {
+    mode: 'rtl',
+    host: null,
+    composer: null,
+    composerForm: null,
+    composerScope: null,
+    anchor: null,
+    observer: null,
+    resizeObserver: null,
+    refreshTimer: null,
+  };
+
+  async function loadMode() {
+    try {
+      const sync = await chrome.storage.sync.get(STORAGE_KEY);
+      if (sync[STORAGE_KEY] === 'rtl' || sync[STORAGE_KEY] === 'ltr') {
+        state.mode = sync[STORAGE_KEY];
+        return;
+      }
+    } catch (_) {}
+
+    try {
+      const local = await chrome.storage.local.get(STORAGE_KEY);
+      if (local[STORAGE_KEY] === 'rtl' || local[STORAGE_KEY] === 'ltr') {
+        state.mode = local[STORAGE_KEY];
+        return;
+      }
+    } catch (_) {}
+
+    state.mode = 'rtl';
+  }
+
+  async function saveMode(mode) {
+    await Promise.allSettled([
+      chrome.storage.sync.set({ [STORAGE_KEY]: mode }),
+      chrome.storage.local.set({ [STORAGE_KEY]: mode }),
+    ]);
+  }
+
+  function reflectButton() {
+    const button = state.host?.shadowRoot?.querySelector('button');
+    if (!button) return;
+    const rtl = state.mode === 'rtl';
+    button.dataset.mode = state.mode;
+    button.setAttribute('aria-pressed', String(rtl));
+    button.setAttribute('aria-label', rtl ? 'RTL is on. Switch ChatGPT to LTR.' : 'LTR is on. Switch ChatGPT to RTL.');
+    button.title = rtl ? 'RTL on — switch to LTR' : 'LTR on — switch to RTL';
+  }
+
+  function makeHost() {
+    let host = document.getElementById(HOST_ID);
+    if (host) { state.host = host; return host; }
+
+    host = document.createElement('span');
+    host.id = HOST_ID;
+    host.setAttribute('data-chatgpt-rtl-host', '1');
+
+    const shadow = host.attachShadow({ mode: 'open' });
+    const style = document.createElement('style');
+    style.textContent = BUTTON_CSS;
+    shadow.appendChild(style);
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.innerHTML = '<svg viewBox="0 0 18 14" aria-hidden="true"><line x1="1" y1="2" x2="17" y2="2"></line><line x1="1" y1="7" x2="13" y2="7"></line><line x1="1" y1="12" x2="8" y2="12"></line></svg>';
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void toggleMode();
+    });
+    shadow.appendChild(button);
+
+    state.host = host;
+    reflectButton();
+    return host;
+  }
+
+  function applyMode(mode) {
+    state.mode = mode === 'ltr' ? 'ltr' : 'rtl';
+    document.documentElement.setAttribute(ROOT_ATTR, state.mode);
+    reflectButton();
+  }
+
+  async function toggleMode() {
+    const next = state.mode === 'rtl' ? 'ltr' : 'rtl';
+    applyMode(next);
+    await saveMode(next);
+    return next;
+  }
+
+  function markComposer(composer) {
+    if (state.composer && state.composer !== composer) state.composer.removeAttribute?.(core.COMPOSER_ATTR);
+    composer?.setAttribute?.(core.COMPOSER_ATTR, '1');
+  }
+
+  function clearResizeObserver() {
+    try { state.resizeObserver?.disconnect(); } catch (_) {}
+    state.resizeObserver = null;
+  }
+
+  function watchComposerSize(composer) {
+    clearResizeObserver();
+    if (!composer || typeof ResizeObserver === 'undefined') return;
+    try {
+      state.resizeObserver = new ResizeObserver(() => scheduleRefresh(100));
+      state.resizeObserver.observe(composer);
+    } catch (_) { state.resizeObserver = null; }
+  }
+
+  function placeHost() {
+    const form = core.getComposerForm();
+    const composer = core.getComposer(form);
+    const host = makeHost();
+
+    if (composer) {
+      const scope = core.composerScope(composer, form);
+      const send = core.getSend(scope);
+      const trailing = core.getTrailing(scope);
+      const trailingAnchor = trailing
+        ? core.qsa(trailing, 'button,[role="button"]').find((el) => core.visible(el) && !core.looksLikeStop(el))
+        : null;
+      const anchor = send || trailingAnchor || core.fallbackAnchor(scope, composer);
+      const parent = anchor?.parentElement;
+
+      markComposer(composer);
+
+      if (parent) {
+        host.dataset.placement = 'inline';
+        if (host.parentElement !== parent || host.nextSibling !== anchor) parent.insertBefore(host, anchor);
+      } else if (trailing) {
+        host.dataset.placement = 'inline';
+        if (host.parentElement !== trailing) trailing.appendChild(host);
+      } else {
+        host.dataset.placement = 'floating';
+        if (host.parentElement !== document.body) document.body.appendChild(host);
+      }
+
+      if (composer !== state.composer) watchComposerSize(composer);
+      state.composer = composer;
+      state.composerForm = form || composer.closest('form');
+      state.composerScope = scope;
+      state.anchor = anchor || null;
+      return true;
+    }
+
+    state.composer?.removeAttribute?.(core.COMPOSER_ATTR);
+
+    if (core.hasConversation()) {
+      host.dataset.placement = 'floating';
+      if (host.parentElement !== document.body) document.body.appendChild(host);
+      state.composer = state.composerForm = state.composerScope = state.anchor = null;
+      clearResizeObserver();
+      return true;
+    }
+
+    state.host = null;
+    host.remove();
+    state.composer = state.composerForm = state.composerScope = state.anchor = null;
+    clearResizeObserver();
+    return false;
+  }
+
+  function scheduleRefresh(delay = 180) {
+    clearTimeout(state.refreshTimer);
+    state.refreshTimer = setTimeout(placeHost, delay);
+  }
+
+  function removedLivePlacement(node) {
+    if (!(node instanceof Element)) return false;
+    return [state.composer, state.composerForm, state.composerScope, state.anchor, state.host]
+      .some((live) => live && (node === live || node.contains(live)));
+  }
+
+  function placementAttributeChanged(target) {
+    if (!(target instanceof Element)) return false;
+    if ([state.composer, state.composerForm, state.composerScope, state.anchor].includes(target)) return true;
+    if (state.composerScope?.contains?.(target)) {
+      return target.matches('button,[role="button"],[contenteditable="true"],textarea,form');
+    }
+    return core.hasPlacementSignal(target);
+  }
+
+  function handleMutations(mutations) {
+    let placementChanged = false;
+
+    for (const mutation of mutations) {
+      if (mutation.type === 'characterData') {
+        core.scanAdded(mutation.target.parentElement);
+        continue;
+      }
+
+      if (mutation.type === 'attributes') {
+        if (placementAttributeChanged(mutation.target)) placementChanged = true;
+        continue;
+      }
+
+      if (mutation.type !== 'childList') continue;
+
+      for (const node of mutation.addedNodes) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          core.scanAdded(node);
+          if (core.hasPlacementSignal(node)) placementChanged = true;
+        } else if (node.nodeType === Node.TEXT_NODE) {
+          core.scanAdded(node.parentElement);
+        }
+      }
+
+      for (const node of mutation.removedNodes) {
+        if (removedLivePlacement(node) || core.hasPlacementSignal(node)) placementChanged = true;
+      }
+    }
+
+    if (placementChanged) scheduleRefresh();
+  }
+
+  function listenStorage() {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== 'sync' && area !== 'local') return;
+      const next = changes[STORAGE_KEY]?.newValue;
+      if (next !== 'rtl' && next !== 'ltr') return;
+      applyMode(next);
+      if (area === 'sync') void chrome.storage.local.set({ [STORAGE_KEY]: next }).catch(() => {});
+    });
+  }
+
+  function listenMessages() {
+    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (message?.type !== TOGGLE_MESSAGE) return undefined;
+      void toggleMode().then((mode) => sendResponse?.({ mode }));
+      return true;
+    });
+  }
+
+  async function init() {
+    await loadMode();
+    applyMode(state.mode);
+    core.scanConversation(document);
+    placeHost();
+
+    state.observer = new MutationObserver(handleMutations);
+    state.observer.observe(document.documentElement, {
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: [
+        'data-testid', 'data-composer-submit', 'data-chatgpt-composer', 'data-type',
+        'data-mobile-composer', 'data-composer-markdown', 'data-turn-key',
+        'data-content-search-unit-key', 'data-chatgpt-search-unit-key',
+        'data-user-message-bubble', 'data-markdown-text-style',
+        'data-message-author-role', 'data-turn', 'aria-label', 'aria-disabled',
+        'disabled', 'contenteditable', 'role', 'id',
+      ],
+      subtree: true,
+    });
+
+    window.addEventListener('popstate', () => scheduleRefresh(0), { passive: true });
+    window.addEventListener('hashchange', () => scheduleRefresh(0), { passive: true });
+    window.addEventListener('pageshow', () => scheduleRefresh(0), { passive: true });
+    window.addEventListener('resize', () => scheduleRefresh(100), { passive: true });
+    window.navigation?.addEventListener('navigate', () => scheduleRefresh(0));
+    document.addEventListener('focusin', (event) => {
+      if (event.target instanceof Element && core.EDITORS.some((selector) => event.target.matches(selector)) && core.likelyEditor(event.target, core.getComposerForm())) {
+        scheduleRefresh(0);
+      }
+    }, true);
+
+    listenStorage();
+    listenMessages();
+  }
+
+  void init();
+})();
