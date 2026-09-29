@@ -10,11 +10,13 @@ from pathlib import Path
 manifest = json.loads(Path('manifest.json').read_text())
 assert manifest['manifest_version'] == 3
 assert manifest['name'] == 'RTL for ChatGPT'
+assert manifest['version'] == '0.5.0'
 assert len(manifest['description']) <= 132
 assert manifest['permissions'] == ['storage'], manifest['permissions']
 assert 'host_permissions' not in manifest, 'unexpected host_permissions declaration'
 assert set(manifest['content_scripts'][0]['matches']) == {'https://chatgpt.com/*', 'https://chat.openai.com/*'}
 assert manifest['background']['service_worker'] == 'background.js'
+assert manifest['content_scripts'][0]['js'] == ['core.js', 'ui.js']
 
 required = [
     'background.js', 'core.js', 'ui.js', 'styles.css',
@@ -38,27 +40,43 @@ for path in ('background.js', 'core.js', 'ui.js', 'styles.css'):
     text = Path(path).read_text()
     assert 'http://' not in text and 'https://' not in text, f'remote URL in production file: {path}'
 
-content = Path('core.js').read_text() + '\n' + Path('ui.js').read_text()
+core = Path('core.js').read_text()
+ui = Path('ui.js').read_text()
 styles = Path('styles.css').read_text()
-required_content_signals = [
+
+required_core_signals = [
     'form[data-chatgpt-composer]',
     '[data-composer-markdown][contenteditable="true"]',
     '[data-testid="composer-trailing-actions"]',
     '[data-turn="user"]',
     '[data-turn="assistant"]',
     '[data-turn-key]',
-    '[data-user-message-bubble] .whitespace-pre-wrap',
+    '[data-user-message-bubble]',
     '[data-markdown-text-style="assistant-message"]',
     'data-chatgpt-rtl-text',
     'data-chatgpt-rtl-list',
     'data-chatgpt-rtl-technical',
     'data-chatgpt-rtl-table',
     'data-chatgpt-rtl-island',
+    'getStop',
+    'hasConversationSignal',
+    'topLevelTurns',
+]
+for signal in required_core_signals:
+    assert signal in core, f'missing DOM resilience signal: {signal}'
+
+required_ui_signals = [
     'MutationObserver',
     'characterData: true',
+    'CONTENT_SCAN_DELAY_MS',
+    'contentQueue: new Set()',
+    'updatedAt',
+    'normalizeStored',
+    'fullScanRequested',
+    'window.navigation?.addEventListener',
 ]
-for signal in required_content_signals:
-    assert signal in content, f'missing runtime resilience signal: {signal}'
+for signal in required_ui_signals:
+    assert signal in ui, f'missing runtime resilience signal: {signal}'
 
 required_style_signals = [
     '[data-chatgpt-rtl-mode="rtl"]',
