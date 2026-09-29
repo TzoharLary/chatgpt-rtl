@@ -37,6 +37,7 @@
   const SEND_CONTROLS = [
     'button[data-testid="composer-send-button"]',
     'button[data-testid="send-button"]',
+    'button[data-testid*="send-button"]',
     'button[data-composer-submit]',
     '#composer-submit-button',
     'button[type="submit"]',
@@ -50,6 +51,7 @@
   const TRAILING_AREAS = [
     '[data-testid="composer-trailing-actions"]',
     '[data-testid="composer-footer-actions"]',
+    '[data-testid="composer-actions"]',
     '[class~="[grid-area:trailing]"]',
   ];
 
@@ -66,7 +68,7 @@
   ].join(',');
 
   const USER_TEXT_ROOTS = [
-    '[data-user-message-bubble] .whitespace-pre-wrap',
+    '[data-user-message-bubble]',
     '[data-testid="user-message"]',
   ].join(',');
 
@@ -82,7 +84,7 @@
   const TECHNICAL_CONTENT = [
     'pre', 'code', 'kbd', 'samp', 'var',
     '.katex', '.katex-display', '[class*="katex"]', '.MathJax',
-    '.CodeMirror', '.cm-editor', '.monaco-editor', '[data-language]',
+    '.CodeMirror', '.cm-editor', '.monaco-editor', '.hljs', '[data-language]',
     'mjx-container', '[data-math]', '[data-math-source]', '[role="math"]', 'math',
   ].join(',');
 
@@ -93,7 +95,8 @@
   ].join(',');
 
   const AUXILIARY_UI = [
-    '[role="status"]', '[role="alert"]', '[role="progressbar"]', '[aria-live]',
+    '[role="status"]', '[role="alert"]', '[role="progressbar"]',
+    '[aria-hidden="true"]', '[hidden]', '[data-conversation-role]',
     'time', 'nav', 'aside', '[data-testid*="citation"]',
     '[data-testid*="attachment"]', '[data-testid*="file"]',
     '[data-testid*="tool"]', '[data-testid*="copy"]',
@@ -106,6 +109,11 @@
   function qsa(root, selector) {
     try { return Array.from((root || document).querySelectorAll(selector)); }
     catch (_) { return []; }
+  }
+
+  function matches(el, selector) {
+    try { return Boolean(el?.matches?.(selector)); }
+    catch (_) { return false; }
   }
 
   function visible(el) {
@@ -137,16 +145,13 @@
   }
 
   function knownComposerForm(form) {
-    return Boolean(form && !inConversation(form) && COMPOSER_FORMS.some((selector) => {
-      try { return form.matches(selector); }
-      catch (_) { return false; }
-    }));
+    return Boolean(form && !inConversation(form) && COMPOSER_FORMS.some((selector) => matches(form, selector)));
   }
 
   function likelyEditor(el, knownForm = null) {
     if (!el || !visible(el) || inConversation(el)) return false;
     if (knownForm?.contains(el)) return true;
-    if (STRONG_EDITORS.some((selector) => el.matches(selector))) return true;
+    if (STRONG_EDITORS.some((selector) => matches(el, selector))) return true;
 
     const metadata = editorMetadata(el);
     if (NON_COMPOSER_PATTERN.test(metadata)) return false;
@@ -163,12 +168,7 @@
       if (form) return form;
     }
 
-    for (const selector of STRONG_EDITORS) {
-      const editor = qsa(document, selector).find((el) => likelyEditor(el));
-      if (editor) return editor.closest('form');
-    }
-
-    for (const selector of FALLBACK_EDITORS) {
+    for (const selector of EDITORS) {
       const editor = qsa(document, selector).find((el) => likelyEditor(el));
       if (editor) return editor.closest('form');
     }
@@ -178,9 +178,9 @@
   function getComposer(form = null) {
     const root = form || document;
     for (const selector of EDITORS) {
-      const matches = qsa(root, selector).filter((el) => likelyEditor(el, form));
-      if (!matches.length) continue;
-      return matches.sort((a, b) => b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom)[0];
+      const found = qsa(root, selector).filter((el) => likelyEditor(el, form));
+      if (!found.length) continue;
+      return found.sort((a, b) => b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom)[0];
     }
     return null;
   }
@@ -199,7 +199,7 @@
     let current = form || composer.parentElement;
     const fallback = form || composer.closest('form') || composer.parentElement || null;
 
-    for (let depth = 0; current && depth < 10; depth += 1, current = current.parentElement) {
+    for (let depth = 0; current && depth < 12; depth += 1, current = current.parentElement) {
       if (current === document.body || current === document.documentElement) break;
       if (hasAny(current, SEND_CONTROLS) || hasAny(current, TRAILING_AREAS)) return current;
     }
@@ -212,10 +212,16 @@
       const candidates = qsa(scope, selector).filter((button) => !looksLikeStop(button));
       const shown = candidates.find(visible);
       if (shown) return shown;
-      const structural = candidates.find((button) => button.isConnected && button.parentElement);
+      const structural = candidates.find((button) => button.isConnected && button.parentElement && !button.hidden);
       if (structural) return structural;
     }
     return null;
+  }
+
+  function getStop(scope) {
+    if (!scope) return null;
+    const candidates = qsa(scope, 'button,[role="button"]').filter(looksLikeStop);
+    return candidates.find(visible) || candidates.find((button) => button.isConnected && button.parentElement) || null;
   }
 
   function getTrailing(scope) {
@@ -229,7 +235,7 @@
 
   function fallbackAnchor(scope, composer) {
     if (!scope) return null;
-    const controls = qsa(scope, 'button,[role="button"]').filter((el) => visible(el) && !looksLikeStop(el));
+    const controls = qsa(scope, 'button,[role="button"]').filter((el) => visible(el));
     if (!controls.length) return null;
     const composerRect = composer?.getBoundingClientRect?.();
     return controls.sort((a, b) => {
@@ -248,14 +254,19 @@
     return Boolean(document.querySelector(TURN_SELECTOR));
   }
 
+  function hasConversationSignal(node) {
+    if (!(node instanceof Element)) return false;
+    return matches(node, TURN_SELECTOR) || Boolean(node.querySelector?.(TURN_SELECTOR));
+  }
+
   function turnRole(turn) {
     const explicit = (turn.getAttribute('data-message-author-role') || turn.getAttribute('data-turn') || '').toLowerCase();
     if (explicit === 'user' || explicit === 'assistant') return explicit;
 
     const key = [turn.getAttribute('data-content-search-unit-key'), turn.getAttribute('data-chatgpt-search-unit-key')]
       .filter(Boolean).join(' ').toLowerCase();
-    if (key.endsWith(':user') || key.includes(':user ')) return 'user';
-    if (key.endsWith(':assistant') || key.includes(':assistant ')) return 'assistant';
+    if (/(^|:)user\b/.test(key)) return 'user';
+    if (/(^|:)assistant\b/.test(key)) return 'assistant';
 
     return turn.querySelector('[data-message-author-role="user"],[data-message-author-role="assistant"]')
       ?.getAttribute('data-message-author-role') || '';
@@ -263,39 +274,59 @@
 
   function excludedText(el) {
     return Boolean(
-      el.matches(TECHNICAL_OR_INTERACTIVE) || el.closest(TECHNICAL_OR_INTERACTIVE) ||
-      el.matches(AUXILIARY_UI) || el.closest(AUXILIARY_UI)
+      matches(el, TECHNICAL_OR_INTERACTIVE) || el.closest?.(TECHNICAL_OR_INTERACTIVE) ||
+      matches(el, AUXILIARY_UI) || el.closest?.(AUXILIARY_UI)
     );
   }
 
   function markText(el) {
-    if (!el?.isConnected || !el.textContent?.trim() || excludedText(el)) return;
+    if (!el?.isConnected) return;
+    if (!el.textContent?.trim() || excludedText(el)) {
+      el.removeAttribute?.(TEXT_ATTR);
+      return;
+    }
     el.setAttribute(TEXT_ATTR, '1');
   }
 
   function markTechnical(root) {
     if (!(root instanceof Element || root instanceof Document)) return;
-    if (root instanceof Element && root.matches(TECHNICAL_CONTENT)) root.setAttribute(TECH_ATTR, '1');
+    if (root instanceof Element && matches(root, TECHNICAL_CONTENT)) root.setAttribute(TECH_ATTR, '1');
     for (const el of qsa(root, TECHNICAL_CONTENT)) el.setAttribute(TECH_ATTR, '1');
-    if (root instanceof Element && root.matches('a,bdi')) root.setAttribute(ISLAND_ATTR, '1');
+    if (root instanceof Element && matches(root, 'a,bdi')) root.setAttribute(ISLAND_ATTR, '1');
     for (const el of qsa(root, 'a,bdi')) el.setAttribute(ISLAND_ATTR, '1');
   }
 
-  function markStructuredProse(root) {
+  function structuredExcluded(el, boundary) {
+    if (!el || !boundary?.contains?.(el)) return true;
+    const aux = el.closest?.(AUXILIARY_UI);
+    if (aux && boundary.contains(aux)) return true;
+    const interactive = el.parentElement?.closest?.('button,[role="button"],a,[role="link"],input,select,textarea,[contenteditable="true"],iframe');
+    if (interactive && boundary.contains(interactive)) return true;
+    const technical = el.parentElement?.closest?.(TECHNICAL_CONTENT);
+    return Boolean(technical && boundary.contains(technical));
+  }
+
+  function markStructuredProse(root, boundary = root) {
     if (!(root instanceof Element)) return;
-    if (root.matches('ul,ol')) root.setAttribute(LIST_ATTR, '1');
-    for (const el of qsa(root, 'ul,ol')) el.setAttribute(LIST_ATTR, '1');
-    if (root.matches('table')) root.setAttribute(TABLE_ATTR, '1');
-    for (const el of qsa(root, 'table')) el.setAttribute(TABLE_ATTR, '1');
+    const lists = matches(root, 'ul,ol') ? [root, ...qsa(root, 'ul,ol')] : qsa(root, 'ul,ol');
+    for (const el of lists) {
+      if (!structuredExcluded(el, boundary)) el.setAttribute(LIST_ATTR, '1');
+    }
+    const tables = matches(root, 'table') ? [root, ...qsa(root, 'table')] : qsa(root, 'table');
+    for (const el of tables) {
+      if (!structuredExcluded(el, boundary)) el.setAttribute(TABLE_ATTR, '1');
+    }
   }
 
   function markKnownRoot(root) {
-    if (!(root instanceof Element) || !root.isConnected || excludedText(root)) return;
+    if (!(root instanceof Element) || !root.isConnected) return;
+    if (matches(root, AUXILIARY_UI) || root.closest?.(AUXILIARY_UI)) return;
+
     for (const el of qsa(root, SEMANTIC_TEXT)) markText(el);
-    markStructuredProse(root);
+    markStructuredProse(root, root);
     markTechnical(root);
 
-    if (root.matches('div,span')) {
+    if (matches(root, 'div,span')) {
       const directText = Array.from(root.childNodes).some(
         (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()
       );
@@ -306,10 +337,10 @@
 
   function markDirectFallback(root, turn) {
     const role = turnRole(turn);
-    if (role !== 'user' && role !== 'assistant') return;
+    if (role !== 'user' && role !== 'assistant' && !matches(turn, '[data-turn-key]')) return;
 
     const candidates = [];
-    if (root instanceof Element && root.matches('div,span')) candidates.push(root);
+    if (root instanceof Element && matches(root, 'div,span')) candidates.push(root);
     candidates.push(...qsa(root, 'div,span'));
 
     for (const el of candidates) {
@@ -324,36 +355,51 @@
 
   function markTurn(turn) {
     if (!turn?.isConnected) return;
-    if (turn.matches(KNOWN_TEXT_ROOTS)) markKnownRoot(turn);
+    if (matches(turn, KNOWN_TEXT_ROOTS)) markKnownRoot(turn);
     for (const root of qsa(turn, KNOWN_TEXT_ROOTS)) markKnownRoot(root);
     for (const el of qsa(turn, SEMANTIC_TEXT)) markText(el);
+    markStructuredProse(turn, turn);
     markTechnical(turn);
     markDirectFallback(turn, turn);
   }
 
+  function topLevelTurns(root = document) {
+    const turns = [];
+    if (root instanceof Element && matches(root, TURN_SELECTOR)) turns.push(root);
+    turns.push(...qsa(root, TURN_SELECTOR));
+    const unique = [...new Set(turns)];
+    const set = new Set(unique);
+    return unique.filter((turn) => {
+      const ancestor = turn.parentElement?.closest?.(TURN_SELECTOR);
+      return !ancestor || !set.has(ancestor);
+    });
+  }
+
   function scanConversation(root = document) {
-    if (root instanceof Element && root.matches(TURN_SELECTOR)) markTurn(root);
-    for (const turn of qsa(root, TURN_SELECTOR)) markTurn(turn);
+    for (const turn of topLevelTurns(root)) markTurn(turn);
   }
 
   function scanAdded(root) {
     if (!(root instanceof Element)) return;
-    if (root.matches(TURN_SELECTOR)) { markTurn(root); return; }
+    if (matches(root, TURN_SELECTOR)) { markTurn(root); return; }
 
-    const turns = qsa(root, TURN_SELECTOR);
+    const turns = topLevelTurns(root);
     if (turns.length) {
       for (const turn of turns) markTurn(turn);
       return;
     }
 
-    const turn = root.closest(TURN_SELECTOR);
+    const turn = root.closest?.(TURN_SELECTOR);
     if (!turn) return;
 
-    const known = root.matches(KNOWN_TEXT_ROOTS) ? root : root.closest(KNOWN_TEXT_ROOTS);
+    const known = matches(root, KNOWN_TEXT_ROOTS) ? root : root.closest?.(KNOWN_TEXT_ROOTS);
     if (known && turn.contains(known)) markKnownRoot(known);
     for (const nested of qsa(root, KNOWN_TEXT_ROOTS)) markKnownRoot(nested);
-    if (root.matches(SEMANTIC_TEXT)) markText(root);
+
+    if (matches(root, SEMANTIC_TEXT)) markText(root);
     for (const el of qsa(root, SEMANTIC_TEXT)) markText(el);
+
+    markStructuredProse(root, turn);
     markTechnical(root);
     markDirectFallback(root, turn);
   }
@@ -370,7 +416,7 @@
     TEXT_ATTR, LIST_ATTR, TABLE_ATTR, TECH_ATTR, ISLAND_ATTR, COMPOSER_ATTR,
     COMPOSER_FORMS, EDITORS, SEND_CONTROLS, TRAILING_AREAS, TURN_SELECTOR,
     qsa, visible, likelyEditor, getComposerForm, getComposer, looksLikeStop,
-    composerScope, getSend, getTrailing, fallbackAnchor, hasConversation,
-    scanConversation, scanAdded, hasPlacementSignal,
+    composerScope, getSend, getStop, getTrailing, fallbackAnchor, hasConversation,
+    hasConversationSignal, scanConversation, scanAdded, hasPlacementSignal,
   });
 })();
