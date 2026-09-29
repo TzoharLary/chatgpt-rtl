@@ -52,6 +52,7 @@
     '[data-testid="composer-trailing-actions"]',
     '[data-testid="composer-footer-actions"]',
     '[data-testid="composer-actions"]',
+    '[data-composer-trailing]',
     '[class~="[grid-area:trailing]"]',
   ];
 
@@ -187,8 +188,12 @@
 
   function looksLikeStop(button) {
     if (!button) return false;
+    const ariaLabel = button.getAttribute('aria-label') || '';
+    const testId = button.getAttribute('data-testid') || '';
+    if (ariaLabel || testId) {
+      return STOP_PATTERN.test(ariaLabel + ' ' + testId);
+    }
     const metadata = [
-      button.getAttribute('aria-label'), button.getAttribute('data-testid'),
       button.getAttribute('data-stop-label'), button.title, button.textContent,
     ].filter(Boolean).join(' ');
     return STOP_PATTERN.test(metadata);

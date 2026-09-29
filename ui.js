@@ -368,7 +368,7 @@
       attributes: true,
       attributeFilter: [
         'data-testid', 'data-composer-submit', 'data-chatgpt-composer', 'data-type',
-        'data-mobile-composer', 'data-composer-markdown', 'data-turn-key',
+        'data-mobile-composer', 'data-composer-markdown', 'data-composer-trailing', 'data-turn-key',
         'data-content-search-unit-key', 'data-chatgpt-search-unit-key',
         'data-user-message-bubble', 'data-markdown-text-style',
         'data-message-author-role', 'data-turn', 'data-math', 'data-math-source',
