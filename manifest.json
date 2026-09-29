@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "ChatGPT RTL",
-  "short_name": "ChatGPT RTL",
+  "name": "RTL for ChatGPT",
+  "short_name": "RTL Helper",
   "version": "0.4.0",
   "description": "One-click RTL/LTR for ChatGPT conversations and composer, with safe handling for code, math, lists, links, and tables.",
   "permissions": [

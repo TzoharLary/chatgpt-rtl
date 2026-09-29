@@ -2,7 +2,7 @@
 
 ## Name
 
-ChatGPT RTL
+RTL for ChatGPT
 
 ## Short description
 
@@ -10,7 +10,7 @@ One-click RTL/LTR for ChatGPT, with clean Hebrew/Arabic text while code, math, l
 
 ## Detailed description
 
-ChatGPT RTL adds a lightweight direction toggle for people who use ChatGPT in Hebrew, Arabic, Persian, and other right-to-left languages.
+RTL for ChatGPT adds a lightweight direction toggle for people who use ChatGPT in Hebrew, Arabic, Persian, and other right-to-left languages.
 
 Features:
 

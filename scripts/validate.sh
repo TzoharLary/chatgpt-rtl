@@ -9,7 +9,7 @@ from pathlib import Path
 
 manifest = json.loads(Path('manifest.json').read_text())
 assert manifest['manifest_version'] == 3
-assert manifest['name'] == 'ChatGPT RTL'
+assert manifest['name'] == 'RTL for ChatGPT'
 assert len(manifest['description']) <= 132
 assert manifest['permissions'] == ['storage'], manifest['permissions']
 assert 'host_permissions' not in manifest, 'unexpected host_permissions declaration'
@@ -34,14 +34,10 @@ for size in (16, 48, 128):
     actual = png_size(f'icons/icon{size}.png')
     assert actual == (size, size), (size, actual)
 
-# Production code must not fetch or import remote code.
 for path in ('background.js', 'core.js', 'ui.js', 'styles.css'):
     text = Path(path).read_text()
     assert 'http://' not in text and 'https://' not in text, f'remote URL in production file: {path}'
 
-# Guard the current ChatGPT contracts and the architecture choices that make the
-# extension resilient. These are intentionally semantic selectors/markers rather
-# than generated class names.
 content = Path('core.js').read_text() + '\n' + Path('ui.js').read_text()
 styles = Path('styles.css').read_text()
 required_content_signals = [

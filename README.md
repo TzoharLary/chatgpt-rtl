@@ -1,4 +1,4 @@
-# ChatGPT RTL
+# RTL for ChatGPT
 
 A lightweight, dependency-free Chrome extension that adds a one-click RTL/LTR toggle to ChatGPT.
 
