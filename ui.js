@@ -55,13 +55,18 @@
     return Boolean(a && b && a.mode === b.mode && a.updatedAt === b.updatedAt);
   }
 
-  async function readArea(area) {
+  async function readAreaRaw(area) {
     try {
       const result = await chrome.storage[area].get(STORAGE_KEY);
-      return normalizeStored(result?.[STORAGE_KEY]);
+      return result?.[STORAGE_KEY] ?? null;
     } catch (_) {
       return null;
     }
+  }
+
+  async function readArea(area) {
+    const raw = await readAreaRaw(area);
+    return normalizeStored(raw);
   }
 
   async function writeArea(area, record) {
@@ -73,16 +78,22 @@
     }
   }
 
+  function needsMigration(raw) {
+    return raw != null && (typeof raw === 'string' || typeof raw.mode === 'undefined');
+  }
+
   async function loadMode() {
-    const [sync, local] = await Promise.all([readArea('sync'), readArea('local')]);
+    const [syncRaw, localRaw] = await Promise.all([readAreaRaw('sync'), readAreaRaw('local')]);
+    const sync = normalizeStored(syncRaw);
+    const local = normalizeStored(localRaw);
     const candidates = [sync, local].filter(Boolean);
     const chosen = candidates.sort((a, b) => b.updatedAt - a.updatedAt)[0] || { mode: 'rtl', updatedAt: 0 };
     state.mode = chosen.mode;
     state.updatedAt = chosen.updatedAt;
 
     const record = { mode: state.mode, updatedAt: state.updatedAt };
-    if (!sameRecord(sync, record)) void writeArea('sync', record);
-    if (!sameRecord(local, record)) void writeArea('local', record);
+    if (!sameRecord(sync, record) || needsMigration(syncRaw)) void writeArea('sync', record);
+    if (!sameRecord(local, record) || needsMigration(localRaw)) void writeArea('local', record);
   }
 
   async function saveMode(mode) {
@@ -107,6 +118,12 @@
     let host = document.getElementById(HOST_ID);
     if (host) {
       state.host = host;
+      reflectButton();
+      return host;
+    }
+
+    if (state.host?.shadowRoot) {
+      host = state.host;
       reflectButton();
       return host;
     }
