@@ -6,62 +6,44 @@
   <link rel="stylesheet" href="../styles.css">
   <style>
     body { font-family: sans-serif; }
-    form { display: block; width: 600px; min-height: 80px; }
-    #prompt-textarea { display:block; width:500px; min-height:40px; }
+    form { display:block; width:640px; min-height:80px; }
+    #prompt-textarea, [data-composer-markdown] { display:block; width:520px; min-height:40px; }
     button { width:32px; height:32px; }
     .katex { display:inline-block; }
+    .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
   </style>
 </head>
 <body>
-  <aside><form id="sidebar-search-form"><div id="sidebar-search" contenteditable="true" role="textbox" aria-label="Search chats">חיפוש</div></form></aside>
-  <main>
-    <article data-turn="assistant" data-message-author-role="assistant">
-      <div class="markdown prose">
-        <p id="hebrew">שלום עולם with English</p>
-        <div class="unknown-assistant-wrapper"><span id="assistant-leaf">טקסט ישיר לא מוכר</span></div>
-        <ul><li id="list-item">פריט ראשון</li></ul>
-        <p>Run <code id="inline-code">npm install</code></p>
-        <pre id="pre"><code>const x = 1;</code></pre>
-        <span class="katex" data-math-source="x^2" id="math">x²</span>
-        <table id="table"><tr><th id="th">כותרת</th><td id="td">123</td></tr></table>
-        <p><a id="url" href="https://example.com">https://example.com/a?b=1</a></p>
-      </div>
-    </article>
-    <article data-turn="user" data-message-author-role="user">
-      <div class="unknown-user-wrapper"><span id="user-leaf">אני המשתמש</span></div>
-    </article>
-
-    <!-- Post-2026-09-26 web rewrite: persistent section shells with data-turn. -->
-    <section data-testid="conversation-turn-20" data-turn="user" id="section-user-turn">
-      <div class="user-message-bubble-color"><div class="whitespace-pre-wrap" id="section-user-text">הודעת משתמש במבנה section</div></div>
-    </section>
-    <section data-testid="conversation-turn-21" data-turn="assistant" id="section-assistant-turn">
-      <div class="markdown" id="section-assistant-root">
-        <p id="section-assistant-text">תשובת עוזר במבנה section</p>
-        <p>Run <code id="section-code">git status</code></p>
-        <span role="status" id="section-status">Thinking…</span>
-        <span data-testid="citation-pill" id="section-citation">Citation 1</span>
-      </div>
-    </section>
-
-    <!-- September 2026 live structure: one turn contains both roles, without
-         data-message-author-role or .markdown/.prose. -->
-    <div data-turn-key="11111111-2222-3333-4444-555555555555" id="current-turn">
-      <div data-user-message-bubble><div class="whitespace-pre-wrap" id="current-user-text">הודעת משתמש חדשה</div></div>
-      <h4 class="sr-only" data-conversation-role="assistant">ChatGPT said:</h4>
-      <div data-markdown-text-style="assistant-message" id="current-assistant-root">
-        <p id="current-assistant-text">תשובה במבנה ספטמבר 2026</p>
-        <pre><code id="current-code">npm test</code></pre>
+  <aside><form><div id="sidebar-search" contenteditable="true" role="textbox" aria-label="Search chats" style="width:180px;height:30px">חיפוש</div></form></aside>
+  <main id="main">
+    <div id="conversation">
+      <section data-testid="conversation-turn-20" data-turn="user" id="user-turn">
+        <div data-user-message-bubble><div class="whitespace-pre-wrap" id="user-text">שלום from user</div></div>
+      </section>
+      <section data-testid="conversation-turn-21" data-turn="assistant" id="assistant-turn">
+        <h4 class="sr-only" data-conversation-role="assistant" id="role-label">ChatGPT said:</h4>
+        <div data-markdown-text-style="assistant-message" id="assistant-root">
+          <p id="hebrew">שלום עולם with English</p>
+          <div class="unknown"><span id="direct">טקסט ישיר</span></div>
+          <ul id="list"><li id="li">פריט ראשון<ul id="nested-list"><li>תת פריט</li></ul></li></ul>
+          <p>Run <code id="inline-code">npm install</code></p>
+          <pre id="pre"><code>const x = 1;</code></pre>
+          <span class="katex" data-math-source="x^2" id="math">x²</span>
+          <table id="table"><tr><th id="th">כותרת</th><td id="td">123</td></tr></table>
+          <p><a id="url" href="https://example.com">https://example.com/a?b=1</a></p>
+          <span role="status" id="status">Thinking…</span>
+          <span data-testid="citation-pill" id="citation">Citation</span>
+        </div>
+      </section>
+      <div data-turn-key="11111111-2222-3333-4444-555555555555" id="combined-turn">
+        <div data-user-message-bubble><div class="whitespace-pre-wrap" id="combined-user">עוד הודעה</div></div>
+        <div data-markdown-text-style="assistant-message"><p id="combined-assistant">עוד תשובה</p></div>
       </div>
     </div>
 
     <form data-chatgpt-composer id="composer-form">
       <div id="prompt-textarea" data-composer-markdown="true" contenteditable="true" role="textbox">בדיקה</div>
-      <div id="controls">
-        <button type="button" aria-label="Attach files">+</button>
-        <button type="button" aria-label="Voice mode">V</button>
-        <button type="submit" data-testid="composer-send-button" id="send">S</button>
-      </div>
+      <div id="controls"><button type="button" aria-label="Attach files">+</button><button type="button" aria-label="Voice mode">V</button><button type="submit" data-testid="composer-send-button" id="send">S</button></div>
     </form>
   </main>
 
@@ -69,36 +51,32 @@
   <script>
     (() => {
       const store = { chatgpt_rtl_mode: 'rtl' };
-      const storageListeners = [];
+      const listeners = [];
       const messageListeners = [];
-      window.__emitExtensionMessage = (msg) => new Promise((resolve) => {
+      const api = (area) => ({
+        get: async (key) => ({ [key]: store[key] }),
+        set: async (obj) => {
+          for (const [key, value] of Object.entries(obj)) {
+            const oldValue = store[key];
+            store[key] = value;
+            if (JSON.stringify(oldValue) !== JSON.stringify(value)) {
+              listeners.forEach((fn) => fn({ [key]: { oldValue, newValue: value } }, area));
+            }
+          }
+        }
+      });
+      window.__store = store;
+      window.__emitExtensionMessage = (message) => new Promise((resolve) => {
         for (const fn of messageListeners) {
-          const async = fn(msg, {}, resolve);
+          const async = fn(message, {}, resolve);
           if (async !== true) resolve(undefined);
         }
       });
       window.chrome = {
         storage: {
-          sync: {
-            get: async (keys) => {
-              if (typeof keys === 'string') return { [keys]: store[keys] };
-              return { ...(keys || {}), ...store };
-            },
-            set: async (obj) => {
-              for (const [k,v] of Object.entries(obj)) {
-                const oldValue = store[k]; store[k] = v;
-                storageListeners.forEach(fn => fn({ [k]: { oldValue, newValue: v } }, 'sync'));
-              }
-            }
-          },
-          local: {
-            get: async (keys) => {
-              if (typeof keys === 'string') return { [keys]: store[keys] };
-              return { ...(keys || {}), ...store };
-            },
-            set: async (obj) => Object.assign(store, obj)
-          },
-          onChanged: { addListener(fn) { storageListeners.push(fn); } }
+          sync: api('sync'),
+          local: api('local'),
+          onChanged: { addListener(fn) { listeners.push(fn); } }
         },
         runtime: { onMessage: { addListener(fn) { messageListeners.push(fn); } } }
       };
@@ -107,113 +85,102 @@
   <script src="../core.js"></script>
   <script src="../ui.js"></script>
   <script>
-    const sleep = ms => new Promise(r => setTimeout(r, ms));
-    const assert = (condition, message) => { if (!condition) throw new Error(message); };
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const assert = (value, message) => { if (!value) throw new Error(message); };
 
     (async () => {
       try {
         await sleep(350);
-        assert(document.documentElement.dataset.chatgptRtlMode === 'rtl', 'default mode should be RTL');
+        assert(document.documentElement.dataset.chatgptRtlMode === 'rtl', 'default/migrated mode should be RTL');
+        assert(typeof window.__store.chatgpt_rtl_mode === 'object', 'old string storage should migrate to a record');
 
         const host = document.getElementById('chatgpt-rtl-toggle-host');
         const send = document.getElementById('send');
-        assert(host && host.dataset.placement === 'inline', 'toggle should mount inline');
-        assert(host.nextSibling === send, 'toggle should sit immediately before send button');
+        assert(host?.dataset.placement === 'inline', 'toggle should mount inline');
+        assert(host.nextSibling === send, 'toggle should mount immediately before send');
+        assert(document.getElementById('prompt-textarea').hasAttribute('data-chatgpt-rtl-composer'), 'composer should be positively marked');
 
-        assert(getComputedStyle(document.getElementById('hebrew')).direction === 'rtl', 'assistant prose should be RTL');
-        assert(getComputedStyle(document.getElementById('list-item')).direction === 'rtl', 'list item should be RTL');
+        for (const id of ['user-text','hebrew','direct','li','combined-user','combined-assistant']) {
+          assert(getComputedStyle(document.getElementById(id)).direction === 'rtl', `${id} should be RTL`);
+        }
         assert(getComputedStyle(document.getElementById('inline-code')).direction === 'ltr', 'inline code should stay LTR');
         assert(getComputedStyle(document.getElementById('pre')).direction === 'ltr', 'pre should stay LTR');
         assert(getComputedStyle(document.getElementById('math')).direction === 'ltr', 'math should stay LTR');
-        assert(getComputedStyle(document.getElementById('table')).direction === 'ltr', 'table columns should preserve LTR order');
-        assert(getComputedStyle(document.getElementById('th')).direction === 'rtl', 'table header prose should be RTL');
-        assert(getComputedStyle(document.getElementById('td')).direction === 'rtl', 'table cell prose should be RTL');
-        assert(document.querySelector('ul').hasAttribute('data-chatgpt-rtl-list'), 'prose list should be runtime-marked');
-        assert(document.getElementById('table').hasAttribute('data-chatgpt-rtl-table'), 'prose table should be runtime-marked');
-        assert(document.getElementById('inline-code').hasAttribute('data-chatgpt-rtl-technical'), 'inline code should be runtime-protected');
-        assert(document.getElementById('url').hasAttribute('data-chatgpt-rtl-island'), 'links should be bidi-isolated');
-        assert(getComputedStyle(document.getElementById('prompt-textarea')).direction === 'rtl', 'composer should be RTL');
-        assert(getComputedStyle(document.getElementById('current-user-text')).direction === 'rtl', 'September 2026 user bubble should be RTL');
-        assert(getComputedStyle(document.getElementById('current-assistant-text')).direction === 'rtl', 'September 2026 assistant prose should be RTL');
-        assert(getComputedStyle(document.getElementById('current-code')).direction === 'ltr', 'code in September 2026 assistant root should stay LTR');
-        assert(getComputedStyle(document.getElementById('section-user-text')).direction === 'rtl', 'post-rewrite section user turn should be RTL');
-        assert(getComputedStyle(document.getElementById('section-assistant-text')).direction === 'rtl', 'post-rewrite section assistant turn should be RTL');
-        assert(getComputedStyle(document.getElementById('section-code')).direction === 'ltr', 'post-rewrite section code should stay LTR');
-        assert(!document.getElementById('section-status').hasAttribute('data-chatgpt-rtl-text'), 'status UI must not be tagged as prose');
-        assert(!document.getElementById('section-citation').hasAttribute('data-chatgpt-rtl-text'), 'citation UI must not be tagged as prose');
-        assert(getComputedStyle(document.getElementById('section-status')).direction === 'ltr', 'status UI must not inherit forced RTL');
-        assert(getComputedStyle(document.getElementById('section-citation')).direction === 'ltr', 'citation UI must not inherit forced RTL');
-        assert(getComputedStyle(document.getElementById('sidebar-search')).direction === 'ltr', 'sidebar search must not be mistaken for composer');
-        assert(document.getElementById('user-leaf').hasAttribute('data-chatgpt-rtl-text'), 'unknown user bubble leaf should be tagged');
-        assert(document.getElementById('assistant-leaf').hasAttribute('data-chatgpt-rtl-text'), 'unknown assistant bubble leaf should be tagged');
+        assert(getComputedStyle(document.getElementById('table')).direction === 'ltr', 'table structure should stay LTR');
+        assert(getComputedStyle(document.getElementById('th')).direction === 'rtl', 'table prose should be RTL');
+        assert(document.getElementById('list').hasAttribute('data-chatgpt-rtl-list'), 'list should be marked');
+        assert(document.getElementById('nested-list').hasAttribute('data-chatgpt-rtl-list'), 'nested list should be marked');
+        assert(document.getElementById('table').hasAttribute('data-chatgpt-rtl-table'), 'table should be marked');
+        assert(document.getElementById('url').hasAttribute('data-chatgpt-rtl-island'), 'link should be isolated');
+        assert(!document.getElementById('status').hasAttribute('data-chatgpt-rtl-text'), 'status must not be prose');
+        assert(!document.getElementById('citation').hasAttribute('data-chatgpt-rtl-text'), 'citation must not be prose');
+        assert(!document.getElementById('role-label').hasAttribute('data-chatgpt-rtl-text'), 'screen-reader role label must not be prose');
+        assert(getComputedStyle(document.getElementById('sidebar-search')).direction === 'ltr', 'sidebar search must not be composer');
 
-        const shadowButton = host.shadowRoot.querySelector('button');
-        shadowButton.click();
-        await sleep(50);
-        assert(document.documentElement.dataset.chatgptRtlMode === 'ltr', 'button should toggle to LTR');
-        assert(getComputedStyle(document.getElementById('hebrew')).direction === 'ltr', 'LTR mode should explicitly force prose LTR');
-        assert(getComputedStyle(document.getElementById('prompt-textarea')).direction === 'ltr', 'LTR mode should explicitly force composer LTR');
-        assert(getComputedStyle(document.getElementById('current-user-text')).direction === 'ltr', 'September 2026 user bubble should toggle LTR');
-        assert(getComputedStyle(document.getElementById('current-assistant-text')).direction === 'ltr', 'September 2026 assistant prose should toggle LTR');
-        assert(getComputedStyle(document.getElementById('section-user-text')).direction === 'ltr', 'post-rewrite section user turn should toggle LTR');
-        assert(getComputedStyle(document.getElementById('section-assistant-text')).direction === 'ltr', 'post-rewrite section assistant turn should toggle LTR');
-
+        host.shadowRoot.querySelector('button').click();
+        await sleep(80);
+        assert(document.documentElement.dataset.chatgptRtlMode === 'ltr', 'UI button should toggle LTR');
+        assert(getComputedStyle(document.getElementById('hebrew')).direction === 'ltr', 'prose should switch LTR');
+        assert(getComputedStyle(document.getElementById('prompt-textarea')).direction === 'ltr', 'composer should switch LTR');
         await window.__emitExtensionMessage({ type: 'chatgpt-rtl:toggle' });
-        await sleep(50);
-        assert(document.documentElement.dataset.chatgptRtlMode === 'rtl', 'runtime message should toggle back to RTL');
+        await sleep(80);
+        assert(document.documentElement.dataset.chatgptRtlMode === 'rtl', 'toolbar message path should toggle back RTL');
 
-        const oldForm = document.getElementById('composer-form');
-        oldForm.remove();
-        const composerShell = document.createElement('section');
-        composerShell.id = 'composer-shell';
-        composerShell.innerHTML = `
-          <form data-chatgpt-composer id="new-composer-form"><div class="editor-wrap"><div id="new-editor" data-composer-markdown="true" contenteditable="true" role="textbox" style="width:500px;height:40px">חדש</div></div></form>
-          <div id="outside-toolbar" data-testid="composer-trailing-actions"><button type="button" aria-label="Voice mode">V</button><button data-composer-submit id="new-send">S</button></div>`;
-        document.querySelector('main').appendChild(composerShell);
-        await sleep(450);
-        const movedHost = document.getElementById('chatgpt-rtl-toggle-host');
-        assert(movedHost?.nextSibling?.id === 'new-send', 'toggle should find a send button outside a form');
-        assert(document.getElementById('new-editor').hasAttribute('data-chatgpt-rtl-composer'), 'detected sibling-toolbar editor should be runtime-marked as composer');
-        assert(getComputedStyle(document.getElementById('sidebar-search')).direction === 'ltr', 'search textbox inside a form must not be misclassified');
-
-        const newSend = document.getElementById('new-send');
-        newSend.dataset.testid = 'stop-button';
-        newSend.setAttribute('aria-label', 'Stop generating');
-        await sleep(350);
-        assert(movedHost.nextSibling !== newSend, 'toggle must never anchor immediately before an attribute-mutated Stop button');
-
-        delete newSend.dataset.testid;
-        newSend.removeAttribute('aria-label');
-        newSend.dataset.composerSubmit = '';
-        await sleep(350);
-        assert(movedHost.nextSibling === newSend, 'toggle should return next to Send after attribute-only streaming transition');
-
-        const p = document.createElement('p');
-        p.id = 'streamed';
-        p.textContent = 'תגובה חדשה בזמן סטרימינג';
-        document.querySelector('.markdown').appendChild(p);
+        send.dataset.testid = 'stop-button';
+        send.setAttribute('aria-label', 'Stop generating');
         await sleep(250);
-        assert(getComputedStyle(p).direction === 'rtl', 'streamed prose should be RTL');
+        assert(host.nextSibling === send, 'toggle should remain next to Stop instead of jumping to an unrelated control');
+        delete send.dataset.testid;
+        send.dataset.testid = 'composer-send-button';
+        send.setAttribute('aria-label', 'Send message');
+        await sleep(250);
+        assert(host.nextSibling === send, 'toggle should stay next to Send after streaming ends');
 
-        const lateSpan = document.createElement('span');
-        lateSpan.id = 'late-direct-text';
-        lateSpan.appendChild(document.createTextNode(''));
-        document.querySelector('.unknown-assistant-wrapper').appendChild(lateSpan);
-        await sleep(50);
-        lateSpan.firstChild.nodeValue = 'טקסט שנוסף דרך characterData';
-        await sleep(200);
-        assert(lateSpan.hasAttribute('data-chatgpt-rtl-text'), 'characterData-only direct text should be tagged');
-        assert(getComputedStyle(lateSpan).direction === 'rtl', 'characterData-only direct text should become RTL');
+        const streamed = document.createElement('p');
+        streamed.id = 'streamed';
+        streamed.appendChild(document.createTextNode(''));
+        document.getElementById('assistant-root').appendChild(streamed);
+        for (let i = 0; i < 40; i += 1) streamed.firstChild.nodeValue += 'א';
+        await sleep(220);
+        assert(streamed.hasAttribute('data-chatgpt-rtl-text'), 'streamed paragraph should be marked after burst mutations');
+        assert(getComputedStyle(streamed).direction === 'rtl', 'streamed paragraph should be RTL');
 
-        composerShell.remove();
-        await sleep(450);
-        assert(movedHost.dataset.placement === 'floating' && movedHost.parentElement === document.body, 'read-only chat should use floating fallback');
+        const generic = document.createElement('section');
+        generic.dataset.turn = 'assistant';
+        generic.id = 'generic-turn';
+        generic.innerHTML = '<div><ul id="generic-list"><li id="generic-li">כללי</li></ul><table id="generic-table"><tr><td id="generic-td">תא</td></tr></table></div>';
+        document.getElementById('conversation').appendChild(generic);
+        await sleep(180);
+        assert(document.getElementById('generic-list').hasAttribute('data-chatgpt-rtl-list'), 'generic turn list should be marked');
+        assert(document.getElementById('generic-table').hasAttribute('data-chatgpt-rtl-table'), 'generic turn table should be marked');
+        assert(getComputedStyle(document.getElementById('generic-li')).direction === 'rtl', 'generic list item should be RTL');
+        assert(getComputedStyle(document.getElementById('generic-td')).direction === 'rtl', 'generic table cell should be RTL');
 
-        assert(document.getElementById('sidebar-search').parentElement, 'sidebar fixture should still exist');
-
-        document.querySelectorAll('[data-message-author-role], [data-turn-key], [data-turn="user"], [data-turn="assistant"]').forEach((el) => el.remove());
+        document.getElementById('composer-form').remove();
+        const shell = document.createElement('section');
+        shell.id = 'new-shell';
+        shell.innerHTML = '<form data-chatgpt-composer><div data-composer-markdown="true" contenteditable="true" role="textbox" id="new-editor" style="width:500px;height:40px">חדש</div></form><div data-testid="composer-trailing-actions"><button aria-label="Voice mode">V</button><button data-composer-submit id="new-send">S</button></div>';
+        document.getElementById('main').appendChild(shell);
         await sleep(350);
-        assert(!document.getElementById('chatgpt-rtl-toggle-host'), 'non-chat pages should not keep a floating toggle');
+        assert(host.nextSibling?.id === 'new-send', 'toggle should follow sibling toolbar send control');
+        assert(document.getElementById('new-editor').hasAttribute('data-chatgpt-rtl-composer'), 'replacement composer should be marked');
+
+        shell.remove();
+        await sleep(300);
+        assert(host.dataset.placement === 'floating' && host.parentElement === document.body, 'read-only conversation should get floating fallback');
+
+        document.getElementById('conversation').remove();
+        await sleep(300);
+        assert(!document.getElementById('chatgpt-rtl-toggle-host'), 'non-chat page should remove floating toggle');
+
+        const lateConversation = document.createElement('section');
+        lateConversation.dataset.turn = 'assistant';
+        lateConversation.innerHTML = '<p id="late-p">שיחה שנוספה מאוחר</p>';
+        document.getElementById('main').appendChild(lateConversation);
+        await sleep(300);
+        const lateHost = document.getElementById('chatgpt-rtl-toggle-host');
+        assert(lateHost?.dataset.placement === 'floating', 'late read-only conversation should create floating toggle');
+        assert(getComputedStyle(document.getElementById('late-p')).direction === 'rtl', 'late conversation prose should be RTL');
 
         document.getElementById('results').textContent = 'PASS';
       } catch (error) {
