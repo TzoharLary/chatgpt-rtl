@@ -1,40 +1,38 @@
 /*
  * ChatGPT RTL — conversation/composer direction only.
  * The surrounding ChatGPT application shell is deliberately untouched.
- *
- * Runtime-owned data attributes are used for conversation content instead of
- * broad descendant selectors. That matters because modern ChatGPT embeds
- * citations, tool/status UI, files, controls and other non-prose nodes inside
- * conversation turns.
  */
 
-/* Prose leaves/wrappers positively identified by content.js. */
+/* Prose leaves positively identified by the runtime. `plaintext` lets each
+ * paragraph use the Unicode first-strong rule internally while keeping the
+ * user's selected visual alignment. This behaves much better for mixed
+ * Hebrew/Arabic + English punctuation than a single forced embedding. */
 html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-text="1"] {
   direction: rtl !important;
   text-align: right !important;
-  unicode-bidi: isolate;
+  unicode-bidi: plaintext !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-text="1"] {
   direction: ltr !important;
   text-align: left !important;
-  unicode-bidi: isolate;
+  unicode-bidi: plaintext !important;
 }
 
 /* The runtime marks whichever editor it positively identifies as the main
- * composer. This also covers future no-form / sibling-toolbar layouts. */
+ * composer. */
 html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-composer="1"] {
   direction: rtl !important;
   text-align: right !important;
-  unicode-bidi: plaintext;
+  unicode-bidi: plaintext !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-composer="1"] {
   direction: ltr !important;
   text-align: left !important;
-  unicode-bidi: plaintext;
+  unicode-bidi: plaintext !important;
 }
 
-/* Stable editor signals provide a harmless extra fallback if the runtime is a
- * moment late during a SPA transition. */
+/* Stable editor signals are a harmless fallback if the runtime is a moment
+ * late during a SPA transition. */
 html[data-chatgpt-rtl-mode="rtl"] :is(
   [data-composer-markdown][contenteditable="true"],
   [data-testid="prompt-textarea"],
@@ -45,7 +43,7 @@ html[data-chatgpt-rtl-mode="rtl"] :is(
 ) {
   direction: rtl !important;
   text-align: right !important;
-  unicode-bidi: plaintext;
+  unicode-bidi: plaintext !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] :is(
   [data-composer-markdown][contenteditable="true"],
@@ -57,10 +55,11 @@ html[data-chatgpt-rtl-mode="ltr"] :is(
 ) {
   direction: ltr !important;
   text-align: left !important;
-  unicode-bidi: plaintext;
+  unicode-bidi: plaintext !important;
 }
 
-/* Inline user-message editing lives inside a turn rather than the main composer. */
+/* Inline editing of a user message lives inside a turn rather than the main
+ * composer. Keep it consistent with the selected mode. */
 html[data-chatgpt-rtl-mode="rtl"] :is(
   [data-message-author-role="user"],
   [data-turn="user"],
@@ -69,7 +68,7 @@ html[data-chatgpt-rtl-mode="rtl"] :is(
 ) [contenteditable="true"][role="textbox"] {
   direction: rtl !important;
   text-align: right !important;
-  unicode-bidi: plaintext;
+  unicode-bidi: plaintext !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] :is(
   [data-message-author-role="user"],
@@ -79,11 +78,11 @@ html[data-chatgpt-rtl-mode="ltr"] :is(
 ) [contenteditable="true"][role="textbox"] {
   direction: ltr !important;
   text-align: left !important;
-  unicode-bidi: plaintext;
+  unicode-bidi: plaintext !important;
 }
 
-/* Lists are marked only when they belong to known message-prose roots. Logical
- * indentation keeps markers on the correct side and nests cleanly. */
+/* Lists are marked only inside conversation prose. Logical indentation keeps
+ * markers on the correct side and behaves correctly for nested lists. */
 html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-list="1"] {
   direction: rtl !important;
   text-align: right !important;
@@ -110,8 +109,8 @@ html:is([data-chatgpt-rtl-mode="rtl"], [data-chatgpt-rtl-mode="ltr"])
   writing-mode: horizontal-tb !important;
 }
 
-/* Preserve markdown table column order. Only table cells follow the selected
- * text direction, and only tables positively identified inside prose are touched. */
+/* Preserve markdown table column order. Cells follow the selected text mode,
+ * while `plaintext` prevents mixed numeric/Latin content from being scrambled. */
 html:is([data-chatgpt-rtl-mode="rtl"], [data-chatgpt-rtl-mode="ltr"])
   [data-chatgpt-rtl-table="1"] {
   direction: ltr !important;
@@ -120,15 +119,17 @@ html:is([data-chatgpt-rtl-mode="rtl"], [data-chatgpt-rtl-mode="ltr"])
 html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-table="1"] :is(th, td, caption) {
   direction: rtl !important;
   text-align: right !important;
+  unicode-bidi: plaintext !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-table="1"] :is(th, td, caption) {
   direction: ltr !important;
   text-align: left !important;
+  unicode-bidi: plaintext !important;
 }
 
-/* Isolate links and explicit bidi islands so raw URLs/emails do not scramble
- * surrounding Hebrew/Arabic punctuation. */
+/* Isolate links / explicit bidi islands so URLs and surrounding punctuation do
+ * not leak bidi state into the rest of a Hebrew/Arabic sentence. */
 html:is([data-chatgpt-rtl-mode="rtl"], [data-chatgpt-rtl-mode="ltr"])
   [data-chatgpt-rtl-island="1"] {
-  unicode-bidi: isolate;
+  unicode-bidi: isolate !important;
 }
