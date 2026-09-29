@@ -8,9 +8,9 @@ The extension does **not** collect, sell, transmit, or retain conversation conte
 
 ## Stored preference
 
-The extension stores one setting: whether ChatGPT should be displayed in `rtl` or `ltr` mode.
+The extension stores only its display preference: whether ChatGPT should be shown in `rtl` or `ltr` mode, plus a local update timestamp used to keep the synced and local copies of that setting consistent.
 
-It uses `chrome.storage.sync` first so the preference can follow a signed-in Chrome profile when Chrome Sync is enabled. If sync storage is unavailable, it falls back to `chrome.storage.local`.
+The preference record is mirrored between `chrome.storage.sync` and `chrome.storage.local`. Sync lets the preference follow a signed-in Chrome profile when Chrome Sync is enabled; the local copy provides a fallback when sync is unavailable. No conversation text is stored in either area.
 
 ## Network access
 
