@@ -58,13 +58,16 @@ Trailing/footer areas:
 - `[data-testid="composer-actions"]`
 - `[data-composer-trailing]` — **observed live 2026-09-29**
 
-### September 29 live DOM observations
+### September 29 & October 02 live DOM observations
 
-Live unauthenticated inspection of `chatgpt.com` (2026-09-29) revealed:
+Live inspection of `chatgpt.com` (2026-09-29 and 2026-10-02) revealed:
 
-- The unauthenticated form uses `form[data-mobile-composer]` with `textarea[data-mobile-composer-prompt]` (`#mobile-composer-prompt`). Authenticated sessions are expected to use `form[data-chatgpt-composer]` with `div#prompt-textarea.ProseMirror`.
-- The trailing control row uses `[data-composer-trailing]` (not the older `data-testid="composer-trailing-actions"`).
-- The send/stop button is now a **single unified element** carrying both `data-send-label="Send message"` and `data-stop-label="Stop generating"` as permanent attributes. The active state is determined by `aria-label` switching between the two labels. The `looksLikeStop` function was updated to prioritize `aria-label` (and `data-testid`) over `data-stop-label` to avoid false-positive Stop classification.
+- The modern ChatGPT layout (Octane / mobile-shell-on-desktop) structures conversation messages inside `<ol data-conversation-transcript>` using `<li data-message-role="user">` and `<li data-message-role="assistant">`. Earlier builds used `data-message-author-role` or `data-turn`.
+- The assistant markdown body wrapper is tagged with `[data-assistant-markdown]`.
+- The user message text wrapper is tagged with `[data-user-message-copy]` alongside `[data-user-message-bubble]`.
+- The composer control row uses `[data-composer-trailing]`.
+- The send/stop button is a unified button carrying both `data-send-label="Send message"` and `data-stop-label="Stop generating"` as permanent attributes. Active state is determined by `aria-label`.
+- Inline message editing on modern turns uses `[data-message-role="user"] [contenteditable="true"][role="textbox"]`.
 
 ## Conversation/message signals
 

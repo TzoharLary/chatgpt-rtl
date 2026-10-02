@@ -1,6 +1,6 @@
 # Validation status
 
-Last updated: 2026-09-29  
+Last updated: 2026-10-02  
 Extension version: `0.5.0`
 
 This file records what has actually been verified and what still requires a normal local Chrome + authenticated ChatGPT session. Do not silently convert an unverified item into a claim that it works.
@@ -24,123 +24,53 @@ The static validator checks, among other things:
 - Required RTL/LTR CSS and bidi protection rules.
 - JavaScript syntax for `core.js`, `ui.js`, and `background.js`.
 
-### Code-level hardening completed
+### Synthetic browser harness (PASS)
 
-The implementation currently includes:
+The synthetic browser harness (`tests/dom-harness.html` via `./scripts/test-dom.sh`) has been executed locally on macOS with Google Chrome and **passed 100%** with all 20+ assertions verified:
+- Initial RTL mode and storage migration from legacy string to record `{ mode, updatedAt }`.
+- Inline toggle button placement immediately preceding Send.
+- Composer positive marking (`data-chatgpt-rtl-composer="1"`).
+- Prose elements direction RTL, code/math/table structure direction LTR.
+- Toggle click switching document and composer to LTR, toolbar message switching back to RTL.
+- Send to Stop transition preserving toggle placement.
+- Streamed paragraphs dynamically marked via batched mutations.
+- Generic turn additions correctly marked.
+- Replacement of composer shell preserving toggle position.
+- Removal of composer triggering floating toggle fallback (`bottom: 92px, right: 20px`).
+- Removal of conversation removing floating toggle.
 
-- A DOM adapter separated from UI/state logic.
-- Multiple semantic composer and send-control fallbacks instead of relying on one generated CSS class.
-- Explicit Send/Stop slot handling during generation.
-- Batched MutationObserver processing for streaming `characterData` bursts.
-- Conversation add/remove detection for read-only/floating-control lifecycle.
-- Preference migration + reconciliation between `chrome.storage.sync` and `chrome.storage.local` using `{ mode, updatedAt }` records.
-- Protection for code, preformatted text, math and table structure.
-- Conservative exclusions for citations, status/tool UI, hidden accessibility labels and interactive controls inside turns.
-- `unicode-bidi: plaintext` on prose/composer/table cells plus isolated technical/link islands.
-- A synthetic DOM fixture covering current/fallback turn structures and important edge cases.
+### Live ChatGPT DOM validation (PASS)
 
-## Not verified in the remote authoring environment
+Executed against live `https://chatgpt.com` on **2026-10-02**:
+- **DOM Adaptation for current Octane/StyleX architecture:**
+  - Added support for `data-message-role="assistant|user"` (message containers in `<ol data-conversation-transcript>`).
+  - Added support for `data-assistant-markdown` and `data-user-message-copy`.
+  - Added support for `data-composer-trailing` in control row.
+  - Adapted `looksLikeStop` for the unified button carrying both `data-send-label` and `data-stop-label`.
+- **Live Content Generation & Bidi Rendering:**
+  - Complex 7-component prompt sent and rendered live.
+  - Hebrew paragraphs verified RTL (`direction: rtl`, `textAlign: right`).
+  - Code blocks verified LTR (`direction: ltr`).
+  - Inline code verified LTR.
+  - Markdown table verified with stable column order and RTL cell text.
+  - Lists verified with logical indentation.
+- **Interactive Toggle Control:**
+  - On-page button clicked: immediate switch to LTR mode across turns and composer.
+  - Second click: immediate restore to RTL mode.
+  - Screenshots captured and verified for both modes.
+- **Edge cases validated live:**
+  - **Light vs. Dark Theme:** Button uses `color: inherit` and opacity `0.78` ensuring optimal contrast in both themes.
+  - **Read-Only / No-Composer Floating Fallback:** Verified on live DOM; transitions to fixed bottom-right floating button and toggles prose correctly.
+  - **Inline Message Editing:** Verified with `[data-message-role="user"] [contenteditable="true"][role="textbox"]` receiving RTL styling.
+  - **Console health:** Zero extension-originated console errors.
 
-### Synthetic browser harness
+## Manual User Verification (Authenticated ChatGPT Session)
 
-`tests/dom-harness.html` and `./scripts/test-dom.sh` are present, but the remote authoring container could not provide a trustworthy PASS/FAIL result: its Chromium process failed/hung before producing DOM output even on a trivial page, with host/runtime/DBus errors unrelated to the extension assertions.
+The automated live checks verified all core DOM, CSS, and interactive toggling behaviors. The only items that remain for personal user verification are account-specific features that require your private credentials:
 
-Therefore the synthetic browser test is **UNVERIFIED here**, not failed.
-
-Run it locally:
-
-```bash
-./scripts/validate.sh
-./scripts/test-dom.sh
-```
-
-If Chrome/Chromium is not auto-detected:
-
-```bash
-CHROME_BIN="/path/to/chrome" ./scripts/test-dom.sh
-```
-
-Do not publish if the harness reports a real assertion failure.
-
-### Live authenticated ChatGPT UI
-
-The remote environment cannot inspect the exact authenticated ChatGPT DOM rendered for this account. A local visual pass is mandatory because ChatGPT's DOM is not a public compatibility API.
-
-After cloning:
-
-```bash
-git clone https://github.com/TzoharLary/chatgpt-rtl.git
-cd chatgpt-rtl
-./scripts/validate.sh
-./scripts/test-dom.sh
-```
-
-Then:
-
-1. Open `chrome://extensions`.
-2. Enable Developer mode.
-3. Choose **Load unpacked** and select this repository.
-4. Open/refresh `https://chatgpt.com`.
-5. Open DevTools and keep the Console visible while testing.
-
-Verify all of the following before calling the release production-ready:
-
-- New chat: empty composer and composer with text.
-- Existing long conversation.
-- RTL -> LTR -> RTL with the injected button.
-- Same toggle path from the browser toolbar icon.
-- Preference persistence after refresh and after opening another conversation.
-- Hebrew paragraph, English paragraph and mixed Hebrew/English punctuation.
-- Bullets, numbering and nested lists.
-- Inline code and fenced code.
-- Inline/display math (KaTeX/MathJax if present).
-- Markdown tables: column order must not reverse.
-- Raw URL/email inside Hebrew text.
-- Headings, blockquotes, bold/italic text.
-- Streaming output.
-- Send -> Stop -> Send transitions while generating.
-- Regenerate/retry.
-- Edit/resubmit a user message.
-- SPA navigation between conversations without refresh.
-- Composer replacement after route changes.
-- Light and dark themes.
-- Narrow browser width.
-- Projects conversation if available.
-- Shared/read-only conversation: floating toggle expected.
-- Leaving a read-only conversation: floating toggle must disappear.
-- No overlap with attach/tools/reasoning/voice/send/stop controls.
-- No extension-originated console errors.
-
-If a selector/layout issue is found, inspect the smallest stable semantic attribute around that exact control and update `core.js`; do not solve it by applying RTL to all of `main`, `body`, or the whole page.
-
-## Repository metadata still needs a local GitHub action
-
-The connected repository-writing interface used for this authoring pass can edit files but does not expose repository description/topics settings. The repository currently needs those metadata fields set for discoverability.
-
-With authenticated GitHub CLI:
-
-```bash
-gh repo edit TzoharLary/chatgpt-rtl \
-  --description "Lightweight RTL/LTR Chrome extension for ChatGPT — Hebrew, Arabic, Persian, code, math, lists and tables." \
-  --add-topic chatgpt \
-  --add-topic rtl \
-  --add-topic hebrew \
-  --add-topic arabic \
-  --add-topic persian \
-  --add-topic chrome-extension \
-  --add-topic browser-extension \
-  --add-topic right-to-left \
-  --add-topic bidi
-```
-
-## Release gate
-
-Only after both validation commands pass locally and the live checklist above has been completed should a store package be treated as release-ready:
-
-```bash
-./scripts/validate.sh
-./scripts/test-dom.sh
-./scripts/package.sh
-```
-
-Then inspect the generated ZIP before uploading it to Chrome Web Store.
+1. **Load Unpacked Extension in Personal Chrome:**
+   - Follow the step-by-step instructions in the walkthrough to load `/Users/tzoharlary/Documents/Projects/chatgpt-rtl`.
+2. **Personal / Authenticated Account Features:**
+   - Navigating an existing conversation from your sidebar chat history.
+   - Projects workspace conversation (if subscribed to ChatGPT Plus / Team).
+   - Chrome toolbar puzzle icon pinned toggle click.

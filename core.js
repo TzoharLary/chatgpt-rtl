@@ -57,6 +57,7 @@
   ];
 
   const TURN_SELECTOR = [
+    '[data-message-role]',
     '[data-message-author-role]',
     '[data-turn="user"]',
     '[data-turn="assistant"]',
@@ -70,10 +71,12 @@
 
   const USER_TEXT_ROOTS = [
     '[data-user-message-bubble]',
+    '[data-user-message-copy]',
     '[data-testid="user-message"]',
   ].join(',');
 
   const ASSISTANT_TEXT_ROOTS = [
+    '[data-assistant-markdown]',
     '[data-markdown-text-style="assistant-message"]',
     '.markdown',
     '.prose',
@@ -265,7 +268,12 @@
   }
 
   function turnRole(turn) {
-    const explicit = (turn.getAttribute('data-message-author-role') || turn.getAttribute('data-turn') || '').toLowerCase();
+    const explicit = (
+      turn.getAttribute('data-message-author-role') ||
+      turn.getAttribute('data-message-role') ||
+      turn.getAttribute('data-turn') ||
+      ''
+    ).toLowerCase();
     if (explicit === 'user' || explicit === 'assistant') return explicit;
 
     const key = [turn.getAttribute('data-content-search-unit-key'), turn.getAttribute('data-chatgpt-search-unit-key')]
