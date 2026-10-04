@@ -10,7 +10,7 @@ from pathlib import Path
 manifest = json.loads(Path('manifest.json').read_text())
 assert manifest['manifest_version'] == 3
 assert manifest['name'] == 'RTL for ChatGPT'
-assert manifest['version'] == '0.5.3'
+assert manifest['version'] == '0.5.4'
 assert len(manifest['description']) <= 132
 assert manifest['permissions'] == ['storage'], manifest['permissions']
 assert 'host_permissions' not in manifest, 'unexpected host_permissions declaration'

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.4 — 2026-10-04
+
+- Calibrated optical margin to 12px right margin, achieving balanced visual centering between the microphone outline button and the pinned Send/Stop circle.
+
 ## 0.5.3 — 2026-10-04
 
 - Added 6px optical right margin to the composer toggle button host, compensating for visual weight disparity between the filled primary Send/Stop button and the thin outline microphone icon.

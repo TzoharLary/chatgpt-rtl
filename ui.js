@@ -20,7 +20,7 @@
   const PLACEMENT_DELAY_MS = 120;
 
   const BUTTON_CSS = `
-    :host{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;color:inherit;font:inherit;z-index:2147483647;margin:0 6px 0 0}
+    :host{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;color:inherit;font:inherit;z-index:2147483647;margin:0 12px 0 0}
     :host([data-placement="floating"]){position:fixed;right:20px;bottom:92px;margin:0}
     button{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;border:0;border-radius:999px;background:transparent;color:inherit;cursor:pointer;opacity:.78;transition:background-color 120ms ease,opacity 120ms ease}
     button:hover{background:color-mix(in srgb,currentColor 10%,transparent);opacity:1}
