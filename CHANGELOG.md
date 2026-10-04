@@ -1,8 +1,11 @@
 # Changelog
 
+## 0.5.3 — 2026-10-04
+
+- Added 6px optical right margin to the composer toggle button host, compensating for visual weight disparity between the filled primary Send/Stop button and the thin outline microphone icon.
+
 ## 0.5.2 — 2026-10-04
 
-- Balanced composer toggle button layout with symmetric zero-margin inline host placement between adjacent toolbar controls.
 - Added native keyboard shortcut (`Alt+Shift+X` / `Option+Shift+X` on Mac) configurable via `chrome://extensions/shortcuts` and active directly in chat.
 - Added native push-triggered auto-reload hook with zero third-party extension dependencies.
 - Reorganized architectural and research documentation into clean `docs/` structure (`docs/bidi-architecture.md`, `docs/research.md`).
