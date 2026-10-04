@@ -24,6 +24,7 @@
         <h4 class="sr-only" data-conversation-role="assistant" id="role-label">ChatGPT said:</h4>
         <div data-markdown-text-style="assistant-message" id="assistant-root">
           <p id="hebrew">שלום עולם with English</p>
+          <p id="mixed-inline">הוא אמר שזה <strong id="strong-word">לא</strong> מקור טוב עבור <code id="inline-code-mixed">CompanyFacts</code> נקודה.</p>
           <div class="unknown"><span id="direct">טקסט ישיר</span></div>
           <ul id="list"><li id="li">פריט ראשון<ul id="nested-list"><li>תת פריט</li></ul></li></ul>
           <p>Run <code id="inline-code">npm install</code></p>
@@ -100,10 +101,14 @@
         assert(host.nextSibling === send, 'toggle should mount immediately before send');
         assert(document.getElementById('prompt-textarea').hasAttribute('data-chatgpt-rtl-composer'), 'composer should be positively marked');
 
-        for (const id of ['user-text','hebrew','direct','li','combined-user','combined-assistant']) {
+        for (const id of ['user-text','hebrew','mixed-inline','direct','li','combined-user','combined-assistant']) {
           assert(getComputedStyle(document.getElementById(id)).direction === 'rtl', `${id} should be RTL`);
         }
+        assert(getComputedStyle(document.getElementById('mixed-inline')).unicodeBidi === 'embed', 'prose should use unicode-bidi: embed');
+        assert(getComputedStyle(document.getElementById('strong-word')).direction === 'rtl', 'strong word should stay RTL');
         assert(getComputedStyle(document.getElementById('inline-code')).direction === 'ltr', 'inline code should stay LTR');
+        assert(getComputedStyle(document.getElementById('inline-code-mixed')).direction === 'ltr', 'mixed inline code should stay LTR');
+        assert(getComputedStyle(document.getElementById('inline-code-mixed')).unicodeBidi === 'isolate', 'inline code should be isolated');
         assert(getComputedStyle(document.getElementById('pre')).direction === 'ltr', 'pre should stay LTR');
         assert(getComputedStyle(document.getElementById('math')).direction === 'ltr', 'math should stay LTR');
         assert(getComputedStyle(document.getElementById('table')).direction === 'ltr', 'table structure should stay LTR');

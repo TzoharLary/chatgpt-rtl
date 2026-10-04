@@ -3,19 +3,18 @@
  * The surrounding ChatGPT application shell is deliberately untouched.
  */
 
-/* Prose leaves positively identified by the runtime. `plaintext` lets each
- * paragraph use the Unicode first-strong rule internally while keeping the
- * user's selected visual alignment. This behaves much better for mixed
- * Hebrew/Arabic + English punctuation than a single forced embedding. */
+/* Prose leaves positively identified by the runtime. `embed` respects the
+ * explicit direction while preserving natural inline formatting flow,
+ * avoiding WebKit/Blink's Bidi space loss bug around <strong>/<code>. */
 html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-text="1"] {
   direction: rtl !important;
   text-align: right !important;
-  unicode-bidi: plaintext !important;
+  unicode-bidi: embed !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-text="1"] {
   direction: ltr !important;
   text-align: left !important;
-  unicode-bidi: plaintext !important;
+  unicode-bidi: embed !important;
 }
 
 /* The runtime marks whichever editor it positively identifies as the main
@@ -23,12 +22,12 @@ html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-text="1"] {
 html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-composer="1"] {
   direction: rtl !important;
   text-align: right !important;
-  unicode-bidi: plaintext !important;
+  unicode-bidi: normal !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-composer="1"] {
   direction: ltr !important;
   text-align: left !important;
-  unicode-bidi: plaintext !important;
+  unicode-bidi: normal !important;
 }
 
 /* Stable editor signals are a harmless fallback if the runtime is a moment
@@ -43,7 +42,7 @@ html[data-chatgpt-rtl-mode="rtl"] :is(
 ) {
   direction: rtl !important;
   text-align: right !important;
-  unicode-bidi: plaintext !important;
+  unicode-bidi: normal !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] :is(
   [data-composer-markdown][contenteditable="true"],
@@ -55,7 +54,7 @@ html[data-chatgpt-rtl-mode="ltr"] :is(
 ) {
   direction: ltr !important;
   text-align: left !important;
-  unicode-bidi: plaintext !important;
+  unicode-bidi: normal !important;
 }
 
 /* Inline editing of a user message lives inside a turn rather than the main
@@ -69,7 +68,7 @@ html[data-chatgpt-rtl-mode="rtl"] :is(
 ) [contenteditable="true"][role="textbox"] {
   direction: rtl !important;
   text-align: right !important;
-  unicode-bidi: plaintext !important;
+  unicode-bidi: normal !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] :is(
   [data-message-role="user"],
@@ -80,7 +79,7 @@ html[data-chatgpt-rtl-mode="ltr"] :is(
 ) [contenteditable="true"][role="textbox"] {
   direction: ltr !important;
   text-align: left !important;
-  unicode-bidi: plaintext !important;
+  unicode-bidi: normal !important;
 }
 
 /* Lists are marked only inside conversation prose. Logical indentation keeps
@@ -121,12 +120,12 @@ html:is([data-chatgpt-rtl-mode="rtl"], [data-chatgpt-rtl-mode="ltr"])
 html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-table="1"] :is(th, td, caption) {
   direction: rtl !important;
   text-align: right !important;
-  unicode-bidi: plaintext !important;
+  unicode-bidi: embed !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-table="1"] :is(th, td, caption) {
   direction: ltr !important;
   text-align: left !important;
-  unicode-bidi: plaintext !important;
+  unicode-bidi: embed !important;
 }
 
 /* Isolate links / explicit bidi islands so URLs and surrounding punctuation do

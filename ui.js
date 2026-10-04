@@ -1,6 +1,11 @@
 (() => {
   'use strict';
 
+  if (typeof window !== 'undefined' && window.location?.search?.includes('__chatgpt_rtl_reload=1')) {
+    chrome.runtime?.sendMessage?.({ action: 'RELOAD_EXTENSION_AND_CLOSE' });
+    return;
+  }
+
   if (globalThis.__CHATGPT_RTL_UI_LOADED__) return;
   globalThis.__CHATGPT_RTL_UI_LOADED__ = true;
 
@@ -17,7 +22,7 @@
   const BUTTON_CSS = `
     :host{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;color:inherit;font:inherit;z-index:2147483647}
     :host([data-placement="floating"]){position:fixed;right:20px;bottom:92px}
-    button{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0 4px 0 0;border:0;border-radius:999px;background:transparent;color:inherit;cursor:pointer;opacity:.78;transition:background-color 120ms ease,opacity 120ms ease}
+    button{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0;border:0;border-radius:999px;background:transparent;color:inherit;cursor:pointer;opacity:.78;transition:background-color 120ms ease,opacity 120ms ease}
     button:hover{background:color-mix(in srgb,currentColor 10%,transparent);opacity:1}
     button:focus-visible{background:color-mix(in srgb,currentColor 10%,transparent);opacity:1;outline:2px solid color-mix(in srgb,currentColor 35%,transparent);outline-offset:2px}
     svg{width:17px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;transition:transform 180ms ease}
@@ -110,8 +115,8 @@
     const rtl = state.mode === 'rtl';
     button.dataset.mode = state.mode;
     button.setAttribute('aria-pressed', String(rtl));
-    button.setAttribute('aria-label', rtl ? 'RTL is on. Switch ChatGPT to LTR.' : 'LTR is on. Switch ChatGPT to RTL.');
-    button.title = rtl ? 'RTL on — switch to LTR' : 'LTR on — switch to RTL';
+    button.setAttribute('aria-label', rtl ? 'RTL is on. Switch ChatGPT to LTR (Alt+Shift+X).' : 'LTR is on. Switch ChatGPT to RTL (Alt+Shift+X).');
+    button.title = rtl ? 'RTL on — switch to LTR (Alt+Shift+X)' : 'LTR on — switch to RTL (Alt+Shift+X)';
   }
 
   function makeHost() {
@@ -393,6 +398,13 @@
 
     listenStorage();
     listenMessages();
+
+    window.addEventListener('keydown', (event) => {
+      if (event.altKey && event.shiftKey && (event.key === 'X' || event.key === 'x' || event.code === 'KeyX')) {
+        event.preventDefault();
+        void toggleMode();
+      }
+    }, true);
   }
 
   void init();

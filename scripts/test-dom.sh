@@ -10,6 +10,10 @@ elif command -v chromium >/dev/null 2>&1; then
   browser="$(command -v chromium)"
 elif command -v chromium-browser >/dev/null 2>&1; then
   browser="$(command -v chromium-browser)"
+elif [[ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]]; then
+  browser="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+elif [[ -x "/Applications/Chromium.app/Contents/MacOS/Chromium" ]]; then
+  browser="/Applications/Chromium.app/Contents/MacOS/Chromium"
 else
   echo "No Chrome/Chromium binary found. Set CHROME_BIN and retry." >&2
   exit 2

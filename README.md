@@ -15,7 +15,7 @@ It is designed for Hebrew and other right-to-left languages while deliberately l
 - Keeps inline code, code blocks, keyboard/preformatted text, and math LTR.
 - Keeps markdown table column order stable while making cell prose follow the selected text mode.
 - Fixes ordered/unordered list direction and logical indentation, including nested lists.
-- Uses bidi isolation plus `unicode-bidi: plaintext` for more reliable mixed Hebrew/Arabic + English punctuation.
+- Uses bidi isolation plus `unicode-bidi: embed` for natural Hebrew/Arabic flow and zero whitespace loss around inline styling (`<strong>`, `<code>`).
 - Survives SPA navigation, composer replacement, Send/Stop attribute changes, and characterData streaming with narrowly scoped observers.
 - Batches streaming mutations so token-by-token updates do not trigger a full placement scan.
 - Mounts a small toggle next to ChatGPT's active Send/Stop control area when possible.
@@ -62,9 +62,9 @@ A browser DOM harness is also included:
 ./scripts/test-dom.sh
 ```
 
-It simulates current ChatGPT composer/message shapes, a search textbox false-positive trap, storage migration, streaming bursts, generic turn fallbacks, composer replacement, attribute-only Send/Stop transitions, code/math/table exceptions, and read-only conversation add/remove lifecycle behavior. A final visual pass in an authenticated ChatGPT session is still required before publishing because ChatGPT's DOM is not a public API and can change independently of this repository.
+It simulates current ChatGPT composer/message shapes, a search textbox false-positive trap, storage migration, streaming bursts, generic turn fallbacks, composer replacement, attribute-only Send/Stop transitions, code/math/table exceptions, and read-only conversation add/remove lifecycle behavior.
 
-See [`AGENTS.md`](./AGENTS.md) for the exact live validation checklist and [`RESEARCH.md`](./RESEARCH.md) for selector/design research.
+See [`docs/bidi-architecture.md`](./docs/bidi-architecture.md) for the bidirectional rendering analysis and [`docs/research.md`](./docs/research.md) for ChatGPT DOM research notes.
 
 ## Package for Chrome Web Store
 
@@ -83,12 +83,13 @@ This creates a production-only `chatgpt-rtl.zip` and excludes development files,
 ├── core.js
 ├── ui.js
 ├── styles.css
-├── AGENTS.md
 ├── CHANGELOG.md
-├── RESEARCH.md
 ├── PRIVACY.md
-├── STORE_LISTING.md
 ├── LICENSE
+├── README.md
+├── docs/
+│   ├── bidi-architecture.md
+│   └── research.md
 ├── icons/
 │   ├── icon.svg
 │   ├── icon16.png

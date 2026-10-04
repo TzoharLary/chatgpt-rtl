@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "RTL for ChatGPT",
   "short_name": "RTL Helper",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "One-click RTL/LTR for ChatGPT conversations and composer, with safe handling for code, math, lists, links, and tables.",
   "permissions": [
     "storage"
@@ -38,5 +38,14 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+  "commands": {
+    "toggle-rtl": {
+      "suggested_key": {
+        "default": "Alt+Shift+X",
+        "mac": "Alt+Shift+X"
+      },
+      "description": "Toggle RTL/LTR direction"
+    }
   }
 }

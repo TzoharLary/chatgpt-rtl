@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.1 — 2026-10-04
+
+- Fixed Bidi space loss bug where spaces between words collapsed around inline elements (`<strong>`, `<code>`), e.g., `"שהואלא"` instead of `"שהוא לא"`.
+- Replaced `unicode-bidi: plaintext` with `unicode-bidi: embed` on prose and table cells, restoring full compliance with explicit RTL directionality and preventing neutral character / punctuation jumping.
+- Changed composer and inline-editing `unicode-bidi` to `normal` for clean contenteditable interaction.
+- Expanded synthetic DOM harness to assert mixed inline elements (`<strong>` + `<code>`) and `unicodeBidi === 'embed'`.
+- Added automatic macOS Google Chrome / Chromium app bundle path discovery in `test-dom.sh`.
+- Balanced composer toggle button layout with symmetric zero-margin inline host placement between adjacent toolbar controls.
+- Added native keyboard shortcut (`Alt+Shift+X` / `Option+Shift+X` on Mac) configurable via `chrome://extensions/shortcuts` and active directly in chat.
+- Added native push-triggered auto-reload hook with zero third-party extension dependencies.
+- Reorganized architectural and research documentation into clean `docs/` structure (`docs/bidi-architecture.md`, `docs/research.md`).
+- Cleaned up internal development scratch files for public release.
+
 ## 0.5.0 — 2026-09-29
 
 - Batched streaming/message MutationObserver work so token-by-token `characterData` updates are deduplicated before prose rescans.

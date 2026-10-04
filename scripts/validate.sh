@@ -10,7 +10,7 @@ from pathlib import Path
 manifest = json.loads(Path('manifest.json').read_text())
 assert manifest['manifest_version'] == 3
 assert manifest['name'] == 'RTL for ChatGPT'
-assert manifest['version'] == '0.5.0'
+assert manifest['version'] == '0.5.1'
 assert len(manifest['description']) <= 132
 assert manifest['permissions'] == ['storage'], manifest['permissions']
 assert 'host_permissions' not in manifest, 'unexpected host_permissions declaration'
@@ -21,7 +21,8 @@ assert manifest['content_scripts'][0]['js'] == ['core.js', 'ui.js']
 required = [
     'background.js', 'core.js', 'ui.js', 'styles.css',
     'icons/icon16.png', 'icons/icon48.png', 'icons/icon128.png',
-    'README.md', 'AGENTS.md', 'RESEARCH.md', 'CHANGELOG.md', 'PRIVACY.md', 'STORE_LISTING.md', 'LICENSE'
+    'README.md', 'CHANGELOG.md', 'PRIVACY.md', 'LICENSE',
+    'docs/bidi-architecture.md', 'docs/research.md'
 ]
 for path in required:
     assert Path(path).exists(), f'missing {path}'
@@ -87,7 +88,7 @@ required_style_signals = [
     '[data-chatgpt-rtl-table="1"]',
     '[data-chatgpt-rtl-island="1"]',
     'unicode-bidi: isolate',
-    'unicode-bidi: plaintext',
+    'unicode-bidi: embed',
 ]
 for signal in required_style_signals:
     assert signal in styles, f'missing RTL/LTR style signal: {signal}'
@@ -103,4 +104,4 @@ node --check ui.js
 node --check background.js
 echo "JavaScript syntax: OK"
 
-echo "Static validation complete. Run ./scripts/test-dom.sh and the live checklist in AGENTS.md before publishing."
+echo "Static validation complete. Run ./scripts/test-dom.sh before publishing."
