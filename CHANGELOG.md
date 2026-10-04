@@ -2,7 +2,7 @@
 
 ## 0.5.4 — 2026-10-04
 
-- Calibrated optical margin to 12px right margin, achieving balanced visual centering between the microphone outline button and the pinned Send/Stop circle.
+- Standardized composer toggle button styling to pure native flexbox (`margin: 0`), ensuring consistent, robust alignment across macOS, Windows, varying zoom levels, and display scalings.
 
 ## 0.5.3 — 2026-10-04
 
