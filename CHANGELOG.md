@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.5 — 2026-10-04
+
+- Release build for verified runtime reload: finalized pure native flexbox alignment and cross-platform verification.
+
 ## 0.5.4 — 2026-10-04
 
 - Standardized composer toggle button styling to pure native flexbox (`margin: 0`), ensuring consistent, robust alignment across macOS, Windows, varying zoom levels, and display scalings.
