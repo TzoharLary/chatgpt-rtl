@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.6 — 2026-10-04
+
+- Anchored composer toggle before the dictation/microphone control in the trailing toolbar, establishing natural ghost-tool grouping and perfect optical symmetry with zero margin hacks.
+- Added graceful fallback to Send/Stop anchor when dictation controls are absent.
+- Preserved pure native flexbox styling (`margin: 0`), guaranteeing cross-platform resilience across macOS, Windows, display DPI scalings, and browser zoom levels.
+
 ## 0.5.5 — 2026-10-04
 
 - Release build for verified runtime reload: finalized pure native flexbox alignment and cross-platform verification.

@@ -48,6 +48,20 @@
     'button[aria-label*="שלח"]',
   ];
 
+  const DICTATION_CONTROLS = [
+    'button[data-start-dictation]',
+    'button[data-testid="composer-speech-button"]',
+    'button[data-testid="composer-dictation-button"]',
+    'button[data-testid="dictation-button"]',
+    'button[data-testid*="dictat"]',
+    'button[data-testid*="microphone"]',
+    'button[data-testid*="mic-button"]',
+    'button[aria-label*="dictat" i]',
+    'button[aria-label*="micro" i]',
+    'button[aria-label*="הכתב" i]',
+    'button[aria-label*="הקלט" i]',
+  ];
+
   const TRAILING_AREAS = [
     '[data-testid="composer-trailing-actions"]',
     '[data-testid="composer-footer-actions"]',
@@ -212,6 +226,18 @@
       if (hasAny(current, SEND_CONTROLS) || hasAny(current, TRAILING_AREAS)) return current;
     }
     return fallback;
+  }
+
+  function getDictation(scope) {
+    if (!scope) return null;
+    for (const selector of DICTATION_CONTROLS) {
+      const candidates = qsa(scope, selector);
+      const shown = candidates.find(visible);
+      if (shown) return shown;
+      const structural = candidates.find((button) => button.isConnected && button.parentElement && !button.hidden);
+      if (structural) return structural;
+    }
+    return null;
   }
 
   function getSend(scope) {
@@ -417,7 +443,7 @@
     markDirectFallback(root, turn);
   }
 
-  const PLACEMENT_SIGNAL = [...COMPOSER_FORMS, ...EDITORS, ...SEND_CONTROLS, ...TRAILING_AREAS].join(',');
+  const PLACEMENT_SIGNAL = [...COMPOSER_FORMS, ...EDITORS, ...DICTATION_CONTROLS, ...SEND_CONTROLS, ...TRAILING_AREAS].join(',');
 
   function hasPlacementSignal(node) {
     if (!(node instanceof Element)) return false;
@@ -427,9 +453,9 @@
 
   globalThis.__CHATGPT_RTL_CORE__ = Object.freeze({
     TEXT_ATTR, LIST_ATTR, TABLE_ATTR, TECH_ATTR, ISLAND_ATTR, COMPOSER_ATTR,
-    COMPOSER_FORMS, EDITORS, SEND_CONTROLS, TRAILING_AREAS, TURN_SELECTOR,
+    COMPOSER_FORMS, EDITORS, DICTATION_CONTROLS, SEND_CONTROLS, TRAILING_AREAS, TURN_SELECTOR,
     qsa, visible, likelyEditor, getComposerForm, getComposer, looksLikeStop,
-    composerScope, getSend, getStop, getTrailing, fallbackAnchor, hasConversation,
+    composerScope, getDictation, getSend, getStop, getTrailing, fallbackAnchor, hasConversation,
     hasConversationSignal, scanConversation, scanAdded, hasPlacementSignal,
   });
 })();

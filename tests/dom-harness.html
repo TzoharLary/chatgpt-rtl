@@ -170,6 +170,13 @@
         assert(host.nextSibling?.id === 'new-send', 'toggle should follow sibling toolbar send control');
         assert(document.getElementById('new-editor').hasAttribute('data-chatgpt-rtl-composer'), 'replacement composer should be marked');
 
+        const dictationBtn = document.createElement('button');
+        dictationBtn.setAttribute('data-start-dictation', 'true');
+        dictationBtn.id = 'dictation-btn';
+        document.querySelector('[data-testid="composer-trailing-actions"]').insertBefore(dictationBtn, document.getElementById('new-send'));
+        await sleep(250);
+        assert(host.nextSibling === dictationBtn, 'toggle should mount immediately before dictation button when present');
+
         shell.remove();
         await sleep(300);
         assert(host.dataset.placement === 'floating' && host.parentElement === document.body, 'read-only conversation should get floating fallback');

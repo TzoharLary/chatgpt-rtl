@@ -198,13 +198,14 @@
 
     if (composer) {
       const scope = core.composerScope(composer, form);
+      const dictation = core.getDictation(scope);
       const send = core.getSend(scope);
       const stop = core.getStop(scope);
       const trailing = core.getTrailing(scope);
       const trailingAnchor = trailing
         ? core.qsa(trailing, 'button,[role="button"]').find((el) => core.visible(el))
         : null;
-      const anchor = send || stop || trailingAnchor || core.fallbackAnchor(scope, composer);
+      const anchor = dictation || send || stop || trailingAnchor || core.fallbackAnchor(scope, composer);
       const parent = anchor?.parentElement;
 
       markComposer(composer);
