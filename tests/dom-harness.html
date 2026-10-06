@@ -25,8 +25,11 @@
         <div data-markdown-text-style="assistant-message" id="assistant-root">
           <p id="hebrew">שלום עולם with English</p>
           <p id="mixed-inline">הוא אמר שזה <strong id="strong-word">לא</strong> מקור טוב עבור <code id="inline-code-mixed">CompanyFacts</code> נקודה.</p>
+          <p id="trailing-dot">של חוזה השדה וה-selector.</p>
+          <p id="trailing-q">איך לזהות ש-fact הוא geographic subset?</p>
+          <p id="trailing-excl">באיזה סדר לנסות CompanyFacts ואז filing!</p>
           <div class="unknown"><span id="direct">טקסט ישיר</span></div>
-          <ul id="list"><li id="li">פריט ראשון<ul id="nested-list"><li>תת פריט</li></ul></li></ul>
+          <ul id="list"><li id="li">פריט ראשון<ul id="nested-list"><li>תת פריט</li></ul></li><li id="trailing-li">איך לזהות ש-fact הוא geographic subset?</li></ul>
           <p>Run <code id="inline-code">npm install</code></p>
           <pre id="pre"><code>const x = 1;</code></pre>
           <span class="katex" data-math-source="x^2" id="math">x²</span>
@@ -101,11 +104,42 @@
         assert(host.nextSibling === send, 'toggle should mount immediately before send');
         assert(document.getElementById('prompt-textarea').hasAttribute('data-chatgpt-rtl-composer'), 'composer should be positively marked');
 
-        for (const id of ['user-text','hebrew','mixed-inline','direct','li','combined-user','combined-assistant']) {
+        assert(getComputedStyle(document.getElementById('assistant-root')).direction === 'rtl', 'assistant root should be RTL in RTL mode');
+        for (const id of ['user-text','hebrew','mixed-inline','trailing-dot','trailing-q','trailing-excl','direct','li','trailing-li','combined-user','combined-assistant']) {
           assert(getComputedStyle(document.getElementById(id)).direction === 'rtl', `${id} should be RTL`);
         }
-        assert(getComputedStyle(document.getElementById('mixed-inline')).unicodeBidi === 'embed', 'prose should use unicode-bidi: embed');
+        assert(getComputedStyle(document.getElementById('mixed-inline')).unicodeBidi === 'isolate', 'prose should use unicode-bidi: isolate');
         assert(getComputedStyle(document.getElementById('strong-word')).direction === 'rtl', 'strong word should stay RTL');
+
+        const getVisualText = (el) => {
+          const textNodes = [];
+          const walk = (n) => { if (n.nodeType === Node.TEXT_NODE) textNodes.push(n); else n.childNodes.forEach(walk); };
+          walk(el);
+          const rects = [];
+          for (const tn of textNodes) {
+            for (let i = 0; i < tn.textContent.length; i++) {
+              const r = document.createRange();
+              r.setStart(tn, i);
+              r.setEnd(tn, i + 1);
+              rects.push({ char: tn.textContent[i], left: Math.round(r.getBoundingClientRect().left) });
+            }
+          }
+          rects.sort((a,b) => a.left - b.left);
+          return rects.map(x => x.char).join('');
+        };
+
+        assert(getVisualText(document.getElementById('trailing-dot')).startsWith('.selector'), 'period must render at far left');
+        assert(getVisualText(document.getElementById('trailing-q')).startsWith('?geographic subset'), 'question mark must render at far left');
+        assert(getVisualText(document.getElementById('trailing-excl')).startsWith('!filing'), 'exclamation mark must render at far left');
+        assert(getVisualText(document.getElementById('trailing-li')).startsWith('?geographic subset'), 'list item question mark must render at far left');
+
+        const strongEl = document.getElementById('strong-word');
+        const textBefore = strongEl.previousSibling;
+        const rZeh = document.createRange();
+        rZeh.setStart(textBefore, textBefore.textContent.length - 2);
+        rZeh.setEnd(textBefore, textBefore.textContent.length - 1);
+        const spaceWidth = Math.round(rZeh.getBoundingClientRect().left - strongEl.getBoundingClientRect().right);
+        assert(spaceWidth > 0, 'space before strong word must be preserved');
         assert(getComputedStyle(document.getElementById('inline-code')).direction === 'ltr', 'inline code should stay LTR');
         assert(getComputedStyle(document.getElementById('inline-code-mixed')).direction === 'ltr', 'mixed inline code should stay LTR');
         assert(getComputedStyle(document.getElementById('inline-code-mixed')).unicodeBidi === 'isolate', 'inline code should be isolated');
@@ -125,6 +159,7 @@
         host.shadowRoot.querySelector('button').click();
         await sleep(80);
         assert(document.documentElement.dataset.chatgptRtlMode === 'ltr', 'UI button should toggle LTR');
+        assert(getComputedStyle(document.getElementById('assistant-root')).direction === 'ltr', 'assistant root should switch LTR');
         assert(getComputedStyle(document.getElementById('hebrew')).direction === 'ltr', 'prose should switch LTR');
         assert(getComputedStyle(document.getElementById('prompt-textarea')).direction === 'ltr', 'composer should switch LTR');
         await window.__emitExtensionMessage({ type: 'chatgpt-rtl:toggle' });

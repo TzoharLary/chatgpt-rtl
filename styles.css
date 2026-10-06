@@ -3,18 +3,44 @@
  * The surrounding ChatGPT application shell is deliberately untouched.
  */
 
-/* Prose leaves positively identified by the runtime. `embed` respects the
- * explicit direction while preserving natural inline formatting flow,
- * avoiding WebKit/Blink's Bidi space loss bug around <strong>/<code>. */
+/* Conversation message bodies and roots establish the base direction level for turns. */
+html[data-chatgpt-rtl-mode="rtl"] :is(
+  [data-assistant-markdown],
+  [data-markdown-text-style="assistant-message"],
+  .markdown,
+  .prose,
+  [data-user-message-bubble],
+  [data-user-message-copy],
+  [data-testid="user-message"]
+) {
+  direction: rtl !important;
+  text-align: right !important;
+}
+html[data-chatgpt-rtl-mode="ltr"] :is(
+  [data-assistant-markdown],
+  [data-markdown-text-style="assistant-message"],
+  .markdown,
+  .prose,
+  [data-user-message-bubble],
+  [data-user-message-copy],
+  [data-testid="user-message"]
+) {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+/* Prose leaves positively identified by the runtime. `isolate` establishes an
+ * independent directional boundary so trailing neutral punctuation after English
+ * terms stays anchored to the left in RTL. */
 html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-text="1"] {
   direction: rtl !important;
   text-align: right !important;
-  unicode-bidi: embed !important;
+  unicode-bidi: isolate !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-text="1"] {
   direction: ltr !important;
   text-align: left !important;
-  unicode-bidi: embed !important;
+  unicode-bidi: isolate !important;
 }
 
 /* The runtime marks whichever editor it positively identifies as the main
@@ -120,12 +146,12 @@ html:is([data-chatgpt-rtl-mode="rtl"], [data-chatgpt-rtl-mode="ltr"])
 html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-table="1"] :is(th, td, caption) {
   direction: rtl !important;
   text-align: right !important;
-  unicode-bidi: embed !important;
+  unicode-bidi: isolate !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-table="1"] :is(th, td, caption) {
   direction: ltr !important;
   text-align: left !important;
-  unicode-bidi: embed !important;
+  unicode-bidi: isolate !important;
 }
 
 /* Isolate links / explicit bidi islands so URLs and surrounding punctuation do

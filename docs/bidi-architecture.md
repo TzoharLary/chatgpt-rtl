@@ -52,26 +52,30 @@ While `plaintext` was originally introduced to allow first-strong heuristics, it
 
 ---
 
-## 4. Architectural Solution
+## 4. Architectural Solution (v0.5.7)
 
-### 1. Conversation Prose (`[data-chatgpt-rtl-text="1"]`)
-* Assigned `direction: rtl !important;`, `text-align: right !important;`, and `unicode-bidi: embed !important;`.
-* `embed` maintains consistent RTL direction across all text nodes while keeping inline formatting (`<strong>`, `<em>`, `<span>`) within the same continuous Bidi sequence, preventing whitespace loss.
+### 1. Root Message Containers (`.markdown`, `.prose`, `[data-assistant-markdown]`, `[data-user-message-bubble]`)
+* Assigned `direction: rtl !important;` and `text-align: right !important;` in RTL mode (and `direction: ltr` in LTR mode).
+* Establishing the overarching base direction for the entire message turn prevents the surrounding ChatGPT LTR application shell from imposing an LTR boundary at paragraph exit.
 
-### 2. Technical Content & Code Blocks (`[data-chatgpt-rtl-technical="1"]` & `[data-chatgpt-rtl-island="1"]`)
+### 2. Conversation Prose (`[data-chatgpt-rtl-text="1"]`)
+* Assigned `direction: rtl !important;`, `text-align: right !important;`, and `unicode-bidi: isolate !important;`.
+* `isolate` establishes an independent directional boundary per paragraph and list item. This guarantees that trailing neutral punctuation (`.`, `?`, `!`, `:`, `,`) following plain English text resolves to the RTL paragraph level (Rule N2) and renders at the far left, while preserving natural inline formatting and whitespace around `<strong>` and `<code>`.
+
+### 3. Technical Content & Code Blocks (`[data-chatgpt-rtl-technical="1"]` & `[data-chatgpt-rtl-island="1"]`)
 * Code blocks (`<pre>`, `<code>`), KaTeX mathematical expressions, and URLs retain `direction: ltr !important;` and `unicode-bidi: isolate !important;`.
 * This strictly confines Latin code and symbols to LTR without leaking directionality into surrounding Hebrew prose.
 
-### 3. Interactive Composer Editor (`[data-chatgpt-rtl-composer="1"]`)
+### 4. Interactive Composer Editor (`[data-chatgpt-rtl-composer="1"]`)
 * Set to `direction: rtl !important;`, `text-align: right !important;`, and `unicode-bidi: normal !important;`.
 * This prevents ProseMirror / contenteditable cursor jumping and input glitches during active typing.
 
-### 4. Markdown Tables (`[data-chatgpt-rtl-table="1"]`)
+### 5. Markdown Tables (`[data-chatgpt-rtl-table="1"]`)
 * Table structure (`<table>`, `<thead>`, `<tbody>`, `<tr>`) remains `direction: ltr !important;` to ensure column order is preserved.
-* Cells (`<th>`, `<td>`) receive `direction: rtl !important;` and `unicode-bidi: embed !important;` for natural Hebrew/Arabic reading within each cell.
+* Cells (`<th>`, `<td>`) receive `direction: rtl !important;` and `unicode-bidi: isolate !important;` for natural Hebrew/Arabic reading within each cell.
 
 ---
 
 ## 5. Verification
 
-This architecture was validated both in synthetic test suites (`tests/dom-harness.html`) and in authenticated live ChatGPT Plus sessions, confirming 100% preservation of whitespace, natural punctuation ordering, and reliable LTR isolation for technical blocks.
+This architecture was validated both in synthetic test suites (`tests/dom-harness.html`) and in authenticated live ChatGPT Plus sessions, confirming 100% preservation of whitespace, natural punctuation ordering for sentences ending in English, and reliable LTR isolation for technical blocks.

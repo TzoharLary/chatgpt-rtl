@@ -10,7 +10,7 @@ from pathlib import Path
 manifest = json.loads(Path('manifest.json').read_text())
 assert manifest['manifest_version'] == 3
 assert manifest['name'] == 'RTL for ChatGPT'
-assert manifest['version'] == '0.5.6'
+assert manifest['version'] == '0.5.7'
 assert len(manifest['description']) <= 132
 assert manifest['permissions'] == ['storage'], manifest['permissions']
 assert 'host_permissions' not in manifest, 'unexpected host_permissions declaration'
@@ -87,8 +87,9 @@ required_style_signals = [
     '[data-chatgpt-rtl-technical="1"]',
     '[data-chatgpt-rtl-table="1"]',
     '[data-chatgpt-rtl-island="1"]',
+    '[data-assistant-markdown]',
+    '[data-user-message-bubble]',
     'unicode-bidi: isolate',
-    'unicode-bidi: embed',
 ]
 for signal in required_style_signals:
     assert signal in styles, f'missing RTL/LTR style signal: {signal}'

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.7 — 2026-10-06
+
+- Fixed trailing neutral punctuation (`.`, `?`, `!`, `:`) jumping to the right side of English words at the end of RTL lines/paragraphs.
+- Added base RTL direction to conversation message containers (`.markdown`, `.prose`, `[data-assistant-markdown]`, `[data-user-message-bubble]`), establishing an overarching RTL embedding level for all prose.
+- Upgraded prose leaves (`[data-chatgpt-rtl-text="1"]`) and table cells to `unicode-bidi: isolate`, forming independent directional run sequences that correctly anchor trailing neutral characters to the RTL paragraph level (UAX #9 Rule N2) at the far left.
+- Maintained 100% preservation of inter-word whitespace around inline elements (`<strong>`, `<code>`), avoiding Blink's whitespace collapse bug.
+- Expanded synthetic DOM harness to assert trailing dot, question mark, exclamation mark, list item visual order, and space preservation.
+
 ## 0.5.6 — 2026-10-04
 
 - Anchored composer toggle before the dictation/microphone control in the trailing toolbar, establishing natural ghost-tool grouping and perfect optical symmetry with zero margin hacks.
