@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.8 — 2026-10-06
+
+- Centered table cell and header content (`text-align: center !important`) in RTL mode, creating clean, balanced columns across mixed Hebrew text, English model identifiers, numbers, and currency values.
+- Added dual RTL/LTR prose classification based on Unicode script detection (`RTL_CHAR_PATTERN`): purely Latin/English paragraphs within Hebrew conversation turns are isolated in LTR (`direction: ltr`, `text-align: left`), fixing punctuation jumping (misplaced periods/colons on the far left) in English blocks.
+- Added semantic arrow normalization for Hebrew prose: horizontal forward flow arrows (`→`, `⇒`, `⟶`) in RTL text nodes are converted to point leftwards (`←`, `⇐`, `⟵`) matching the natural right-to-left reading flow, while strictly preserving rightward arrows in technical/code content (`<code>`, `<pre>`).
+- Supported bidirectional arrow restoration on mode toggle: converted arrows revert to original rightwards orientation when toggling to LTR mode.
+- Expanded synthetic DOM harness to assert table centering, pure English LTR isolation, period placement, Hebrew arrow conversion, code arrow preservation, and roundtrip mode toggle reversion.
+
 ## 0.5.7 — 2026-10-06
 
 - Fixed trailing neutral punctuation (`.`, `?`, `!`, `:`) jumping to the right side of English words at the end of RTL lines/paragraphs.

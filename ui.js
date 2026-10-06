@@ -161,6 +161,7 @@
     state.mode = mode === 'ltr' ? 'ltr' : 'rtl';
     document.documentElement.setAttribute(ROOT_ATTR, state.mode);
     reflectButton();
+    core?.scanConversation?.();
   }
 
   async function toggleMode() {
@@ -399,13 +400,6 @@
 
     listenStorage();
     listenMessages();
-
-    window.addEventListener('keydown', (event) => {
-      if (event.altKey && event.shiftKey && (event.key === 'X' || event.key === 'x' || event.code === 'KeyX')) {
-        event.preventDefault();
-        void toggleMode();
-      }
-    }, true);
   }
 
   void init();

@@ -31,13 +31,19 @@ html[data-chatgpt-rtl-mode="ltr"] :is(
 
 /* Prose leaves positively identified by the runtime. `isolate` establishes an
  * independent directional boundary so trailing neutral punctuation after English
- * terms stays anchored to the left in RTL. */
-html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-text="1"] {
+ * terms stays anchored to the left in RTL, while purely Latin/English paragraphs
+ * stay left-aligned in LTR without misplaced periods. */
+html[data-chatgpt-rtl-mode="rtl"] :is([data-chatgpt-rtl-text="1"], [data-chatgpt-rtl-text="rtl"]) {
   direction: rtl !important;
   text-align: right !important;
   unicode-bidi: isolate !important;
 }
-html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-text="1"] {
+html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-text="ltr"] {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate !important;
+}
+html[data-chatgpt-rtl-mode="ltr"] :is([data-chatgpt-rtl-text="1"], [data-chatgpt-rtl-text="rtl"], [data-chatgpt-rtl-text="ltr"]) {
   direction: ltr !important;
   text-align: left !important;
   unicode-bidi: isolate !important;
@@ -145,7 +151,7 @@ html:is([data-chatgpt-rtl-mode="rtl"], [data-chatgpt-rtl-mode="ltr"])
 }
 html[data-chatgpt-rtl-mode="rtl"] [data-chatgpt-rtl-table="1"] :is(th, td, caption) {
   direction: rtl !important;
-  text-align: right !important;
+  text-align: center !important;
   unicode-bidi: isolate !important;
 }
 html[data-chatgpt-rtl-mode="ltr"] [data-chatgpt-rtl-table="1"] :is(th, td, caption) {

@@ -52,30 +52,37 @@ While `plaintext` was originally introduced to allow first-strong heuristics, it
 
 ---
 
-## 4. Architectural Solution (v0.5.7)
+## 4. Architectural Solution (v0.5.8)
 
 ### 1. Root Message Containers (`.markdown`, `.prose`, `[data-assistant-markdown]`, `[data-user-message-bubble]`)
 * Assigned `direction: rtl !important;` and `text-align: right !important;` in RTL mode (and `direction: ltr` in LTR mode).
 * Establishing the overarching base direction for the entire message turn prevents the surrounding ChatGPT LTR application shell from imposing an LTR boundary at paragraph exit.
 
-### 2. Conversation Prose (`[data-chatgpt-rtl-text="1"]`)
-* Assigned `direction: rtl !important;`, `text-align: right !important;`, and `unicode-bidi: isolate !important;`.
-* `isolate` establishes an independent directional boundary per paragraph and list item. This guarantees that trailing neutral punctuation (`.`, `?`, `!`, `:`, `,`) following plain English text resolves to the RTL paragraph level (Rule N2) and renders at the far left, while preserving natural inline formatting and whitespace around `<strong>` and `<code>`.
+### 2. Conversation Prose & Dual Classification (`[data-chatgpt-rtl-text="rtl|ltr"]`)
+* Assigned `direction: rtl !important;`, `text-align: right !important;`, and `unicode-bidi: isolate !important;` for RTL/mixed elements.
+* `isolate` establishes an independent directional boundary per paragraph and list item. This guarantees that trailing neutral punctuation (`.`, `?`, `!`, `:`, `,`) following plain English text resolves to the RTL paragraph level (Rule N2) and renders at the far left.
+* **Dual Script Classification:** Purely Latin/English paragraphs without any Hebrew/Arabic characters are tagged as `data-chatgpt-rtl-text="ltr"` and given `direction: ltr !important; text-align: left !important; unicode-bidi: isolate !important;`, ensuring English blocks keep their periods on the right and left-aligned margins without being scrambled by the RTL container.
 
-### 3. Technical Content & Code Blocks (`[data-chatgpt-rtl-technical="1"]` & `[data-chatgpt-rtl-island="1"]`)
+### 3. Semantic Arrow Normalization
+* In Hebrew prose, chronological reading flow is right-to-left. Standard forward flow arrows (`→`, `⇒`, `⟶`) emitted by LLMs point rightwards (backwards to the preceding step).
+* `core.js` detects forward arrows in Hebrew prose text nodes and normalizes them to point leftwards (`←`, `⇐`, `⟵`), aligning with Hebrew reading order.
+* Technical content (`<code>`, `<pre>`) is strictly exempted: arrows in code (`A → B → C`) remain rightwards in LTR.
+* On mode toggle to LTR, converted arrows revert to their original rightward form.
+
+### 4. Technical Content & Code Blocks (`[data-chatgpt-rtl-technical="1"]` & `[data-chatgpt-rtl-island="1"]`)
 * Code blocks (`<pre>`, `<code>`), KaTeX mathematical expressions, and URLs retain `direction: ltr !important;` and `unicode-bidi: isolate !important;`.
 * This strictly confines Latin code and symbols to LTR without leaking directionality into surrounding Hebrew prose.
 
-### 4. Interactive Composer Editor (`[data-chatgpt-rtl-composer="1"]`)
+### 5. Interactive Composer Editor (`[data-chatgpt-rtl-composer="1"]`)
 * Set to `direction: rtl !important;`, `text-align: right !important;`, and `unicode-bidi: normal !important;`.
 * This prevents ProseMirror / contenteditable cursor jumping and input glitches during active typing.
 
-### 5. Markdown Tables (`[data-chatgpt-rtl-table="1"]`)
+### 6. Markdown Tables (`[data-chatgpt-rtl-table="1"]`)
 * Table structure (`<table>`, `<thead>`, `<tbody>`, `<tr>`) remains `direction: ltr !important;` to ensure column order is preserved.
-* Cells (`<th>`, `<td>`) receive `direction: rtl !important;` and `unicode-bidi: isolate !important;` for natural Hebrew/Arabic reading within each cell.
+* Cells and headers (`<th>`, `<td>`, `caption`) receive `direction: rtl !important;`, `text-align: center !important;`, and `unicode-bidi: isolate !important;`. Centering eliminates awkward gaps and alignment mismatches between Hebrew descriptions, English identifiers, numbers, and currency.
 
 ---
 
 ## 5. Verification
 
-This architecture was validated both in synthetic test suites (`tests/dom-harness.html`) and in authenticated live ChatGPT Plus sessions, confirming 100% preservation of whitespace, natural punctuation ordering for sentences ending in English, and reliable LTR isolation for technical blocks.
+This architecture was validated both in synthetic test suites (`tests/dom-harness.html`) and in authenticated live ChatGPT Plus sessions, confirming 100% preservation of whitespace, natural punctuation ordering for sentences ending in English, reliable LTR isolation for technical blocks and pure English paragraphs, centered table layouts, and natural leftward arrow flow in Hebrew.

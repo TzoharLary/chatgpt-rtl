@@ -30,10 +30,15 @@
           <p id="trailing-excl">באיזה סדר לנסות CompanyFacts ואז filing!</p>
           <div class="unknown"><span id="direct">טקסט ישיר</span></div>
           <ul id="list"><li id="li">פריט ראשון<ul id="nested-list"><li>תת פריט</li></ul></li><li id="trailing-li">איך לזהות ש-fact הוא geographic subset?</li></ul>
+          <p id="pure-en">The user logs in, is authenticated, and then gains access to the system.</p>
+          <h4 id="pure-en-head">English without arrows:</h4>
+          <p id="hebrew-arrows">קלט משתמש → עיבוד → אימות → שמירה.</p>
+          <p id="hebrew-double-arrow">הסיסמה תקינה ⇒ המשתמש מורשה להיכנס.</p>
+          <p id="code-arrow">בדוק קוד: <code id="inline-code-arrow">A → B → C</code></p>
           <p>Run <code id="inline-code">npm install</code></p>
           <pre id="pre"><code>const x = 1;</code></pre>
           <span class="katex" data-math-source="x^2" id="math">x²</span>
-          <table id="table"><tr><th id="th">כותרת</th><td id="td">123</td></tr></table>
+          <table id="table"><tr><th id="th">כותרת</th><td id="td">123</td><td id="table-arrow">מחיר ↑ → ביקוש ↓</td></tr></table>
           <p><a id="url" href="https://example.com">https://example.com/a?b=1</a></p>
           <span role="status" id="status">Thinking…</span>
           <span data-testid="citation-pill" id="citation">Citation</span>
@@ -147,6 +152,19 @@
         assert(getComputedStyle(document.getElementById('math')).direction === 'ltr', 'math should stay LTR');
         assert(getComputedStyle(document.getElementById('table')).direction === 'ltr', 'table structure should stay LTR');
         assert(getComputedStyle(document.getElementById('th')).direction === 'rtl', 'table prose should be RTL');
+        assert(getComputedStyle(document.getElementById('th')).textAlign === 'center', 'table th should be centered');
+        assert(getComputedStyle(document.getElementById('td')).textAlign === 'center', 'table td should be centered');
+
+        assert(document.getElementById('pure-en').getAttribute('data-chatgpt-rtl-text') === 'ltr', 'pure English prose should be marked LTR');
+        assert(getComputedStyle(document.getElementById('pure-en')).direction === 'ltr', 'pure English prose should be LTR direction');
+        assert(getVisualText(document.getElementById('pure-en')).endsWith('.'), 'pure English paragraph must have period at far right');
+        assert(getVisualText(document.getElementById('pure-en-head')).endsWith(':'), 'pure English heading must have colon at far right');
+
+        assert(document.getElementById('hebrew-arrows').textContent.includes('←'), 'Hebrew flow arrows must be converted to leftwards in RTL');
+        assert(document.getElementById('hebrew-double-arrow').textContent.includes('⇐'), 'Hebrew implication arrow must be converted to leftwards in RTL');
+        assert(document.getElementById('inline-code-arrow').textContent.includes('→'), 'code arrows must remain rightwards');
+        assert(document.getElementById('table-arrow').textContent.includes('←'), 'table cell Hebrew arrow must be converted to leftwards');
+
         assert(document.getElementById('list').hasAttribute('data-chatgpt-rtl-list'), 'list should be marked');
         assert(document.getElementById('nested-list').hasAttribute('data-chatgpt-rtl-list'), 'nested list should be marked');
         assert(document.getElementById('table').hasAttribute('data-chatgpt-rtl-table'), 'table should be marked');
@@ -162,9 +180,11 @@
         assert(getComputedStyle(document.getElementById('assistant-root')).direction === 'ltr', 'assistant root should switch LTR');
         assert(getComputedStyle(document.getElementById('hebrew')).direction === 'ltr', 'prose should switch LTR');
         assert(getComputedStyle(document.getElementById('prompt-textarea')).direction === 'ltr', 'composer should switch LTR');
+        assert(document.getElementById('hebrew-arrows').textContent.includes('→'), 'Hebrew arrows must revert to rightwards in LTR mode');
         await window.__emitExtensionMessage({ type: 'chatgpt-rtl:toggle' });
         await sleep(80);
         assert(document.documentElement.dataset.chatgptRtlMode === 'rtl', 'toolbar message path should toggle back RTL');
+        assert(document.getElementById('hebrew-arrows').textContent.includes('←'), 'Hebrew arrows must re-convert to leftwards on toggle back');
 
         send.dataset.testid = 'stop-button';
         send.setAttribute('aria-label', 'Stop generating');

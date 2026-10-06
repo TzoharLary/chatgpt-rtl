@@ -318,13 +318,58 @@
     );
   }
 
+  const RTL_CHAR_PATTERN = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/;
+  const FORWARD_ARROWS_RTL_MAP = { '→': '←', '⇒': '⇐', '⟶': '⟵' };
+  const FORWARD_ARROWS_LTR_MAP = { '←': '→', '⇐': '⇒', '⟵': '⟶' };
+  const HAS_ARROWS_ATTR = 'data-chatgpt-rtl-arrows';
+
+  function isRtlMode() {
+    return document.documentElement.getAttribute('data-chatgpt-rtl-mode') !== 'ltr';
+  }
+
+  function normalizeArrows(el, toRtl) {
+    if (!el || !el.isConnected) return;
+    const map = toRtl ? FORWARD_ARROWS_RTL_MAP : FORWARD_ARROWS_LTR_MAP;
+    const searchRe = toRtl ? /[→⇒⟶]/ : /[←⇐⟵]/;
+
+    if (toRtl && !/[→⇒⟶]/.test(el.textContent || '')) return;
+    if (!toRtl && !el.hasAttribute(HAS_ARROWS_ATTR)) return;
+
+    const walk = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        if (searchRe.test(node.nodeValue)) {
+          let updated = node.nodeValue;
+          for (const [from, to] of Object.entries(map)) {
+            if (updated.includes(from)) {
+              updated = updated.replaceAll(from, to);
+            }
+          }
+          if (updated !== node.nodeValue) {
+            node.nodeValue = updated;
+            el.setAttribute(HAS_ARROWS_ATTR, '1');
+          }
+        }
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        if (matches(node, TECHNICAL_CONTENT) || matches(node, AUXILIARY_UI)) return;
+        for (const child of Array.from(node.childNodes)) {
+          walk(child);
+        }
+      }
+    };
+
+    walk(el);
+  }
+
   function markText(el) {
     if (!el?.isConnected) return;
-    if (!el.textContent?.trim() || excludedText(el)) {
+    const text = el.textContent?.trim();
+    if (!text || excludedText(el)) {
       el.removeAttribute?.(TEXT_ATTR);
       return;
     }
-    el.setAttribute(TEXT_ATTR, '1');
+    const isRtl = RTL_CHAR_PATTERN.test(text);
+    el.setAttribute(TEXT_ATTR, isRtl ? 'rtl' : 'ltr');
+    normalizeArrows(el, isRtl && isRtlMode());
   }
 
   function markTechnical(root) {
@@ -353,7 +398,14 @@
     }
     const tables = matches(root, 'table') ? [root, ...qsa(root, 'table')] : qsa(root, 'table');
     for (const el of tables) {
-      if (!structuredExcluded(el, boundary)) el.setAttribute(TABLE_ATTR, '1');
+      if (!structuredExcluded(el, boundary)) {
+        el.setAttribute(TABLE_ATTR, '1');
+        for (const cell of qsa(el, 'th,td,caption')) {
+          const cellText = cell.textContent?.trim() || '';
+          const cellIsRtl = RTL_CHAR_PATTERN.test(cellText);
+          normalizeArrows(cell, cellIsRtl && isRtlMode());
+        }
+      }
     }
   }
 
