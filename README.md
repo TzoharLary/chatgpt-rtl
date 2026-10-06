@@ -13,9 +13,13 @@ It is designed for Hebrew and other right-to-left languages while deliberately l
 - Supports current and legacy ChatGPT conversation/composer selectors with semantic fallbacks.
 - Remembers the selected mode using mirrored `chrome.storage.sync` + `chrome.storage.local` records, with conflict resolution if one copy is stale or unavailable.
 - Keeps inline code, code blocks, keyboard/preformatted text, and math LTR.
-- Keeps markdown table column order stable while making cell prose follow the selected text mode.
+- Keeps markdown table column order stable while centering cell and header content in RTL mode to cleanly balance mixed Hebrew text, English model identifiers, numbers, and currency values.
 - Fixes ordered/unordered list direction and logical indentation, including nested lists.
-- Uses bidi isolation plus `unicode-bidi: embed` for natural Hebrew/Arabic flow and zero whitespace loss around inline styling (`<strong>`, `<code>`).
+- Isolates prose leaves with `unicode-bidi: isolate` for natural Hebrew/Arabic flow and zero whitespace loss around inline styling (`<strong>`, `<code>`), anchoring trailing neutral punctuation (`.`, `?`, `!`, `:`) after English words to the far left in RTL.
+- Detects purely Latin/English paragraphs and headings within Hebrew turns and isolates them in LTR, preventing punctuation flipping and awkward margins in English blocks.
+- Semantically normalizes horizontal forward flow arrows (`→`, `⇒`, `⟶`) in Hebrew prose to point leftwards (`←`, `⇐`, `⟵`) matching the natural right-to-left reading flow, while preserving rightward arrows in code (`A → B → C`).
+- Reverts converted arrows and restores original flow on mode toggle to LTR.
+- Supports a native keyboard shortcut (`Alt+Shift+X` / `Option+Shift+X` on Mac) configurable via `chrome://extensions/shortcuts`.
 - Survives SPA navigation, composer replacement, Send/Stop attribute changes, and characterData streaming with narrowly scoped observers.
 - Batches streaming mutations so token-by-token updates do not trigger a full placement scan.
 - Mounts a small toggle next to ChatGPT's active Send/Stop control area when possible.
