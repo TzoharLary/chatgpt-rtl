@@ -56,10 +56,12 @@
     'button[data-testid*="dictat"]',
     'button[data-testid*="microphone"]',
     'button[data-testid*="mic-button"]',
+    'button[data-testid*="voice"]',
     'button[aria-label*="dictat" i]',
     'button[aria-label*="micro" i]',
     'button[aria-label*="הכתב" i]',
     'button[aria-label*="הקלט" i]',
+    'button[aria-label*="קול" i]',
   ];
 
   const TRAILING_AREAS = [
@@ -68,6 +70,7 @@
     '[data-testid="composer-actions"]',
     '[data-composer-trailing]',
     '[class~="[grid-area:trailing]"]',
+    'div[class*="trailing"]',
   ];
 
   const TURN_SELECTOR = [
@@ -76,17 +79,29 @@
     '[data-turn="user"]',
     '[data-turn="assistant"]',
     '[data-turn-key]',
+    '[data-message-id]',
     '[data-content-search-unit-key]',
     '[data-chatgpt-search-unit-key]',
     'article[data-turn]',
     'section[data-turn]',
-    '[data-testid^="conversation-turn"]',
+    'article',
+    '[data-testid*="conversation-turn"]',
+    '[data-testid*="chat-turn"]',
+    'div[class*="conversation-turn"]',
+    'li[data-message-role]',
+    'div[data-message-role]',
+    '[data-assistant-stream-block]',
+    'section[data-web-mobile-conversation]',
+    '[data-conversation-id]',
   ].join(',');
 
   const USER_TEXT_ROOTS = [
     '[data-user-message-bubble]',
     '[data-user-message-copy]',
     '[data-testid="user-message"]',
+    'div[class*="user-message"]',
+    '[data-message-role="user"]',
+    '[data-message-author-role="user"]',
   ].join(',');
 
   const ASSISTANT_TEXT_ROOTS = [
@@ -94,6 +109,13 @@
     '[data-markdown-text-style="assistant-message"]',
     '.markdown',
     '.prose',
+    'div[class*="markdown"]',
+    'div[class*="prose"]',
+    'div[class*="text-message"]',
+    '[data-testid="assistant-message"]',
+    '[data-message-role="assistant"]',
+    '[data-message-author-role="assistant"]',
+    '[data-assistant-stream-block]',
   ].join(',');
 
   const KNOWN_TEXT_ROOTS = `${USER_TEXT_ROOTS},${ASSISTANT_TEXT_ROOTS}`;
@@ -311,7 +333,12 @@
       ?.getAttribute('data-message-author-role') || '';
   }
 
+  function isUserMessageElement(el) {
+    return Boolean(el?.closest?.('[data-user-message-bubble],[data-user-message-copy],[data-testid="user-message"]'));
+  }
+
   function excludedText(el) {
+    if (isUserMessageElement(el)) return false;
     return Boolean(
       matches(el, TECHNICAL_OR_INTERACTIVE) || el.closest?.(TECHNICAL_OR_INTERACTIVE) ||
       matches(el, AUXILIARY_UI) || el.closest?.(AUXILIARY_UI)
@@ -360,16 +387,85 @@
     walk(el);
   }
 
+  const HAS_PUNCT_ATTR = 'data-chatgpt-rtl-punct';
+  const RLM_CHAR = '\u200F';
+  const TRAILING_PUNCT_RE = /([a-zA-Z0-9][a-zA-Z0-9_\-\./\'\"”\)\]]*)([\.\?\!\:\,\;]+[\'\"”\)\]]*)(?!\u200F)(?=\s*(?:$|[\n\r]|[\u0590-\u05FF\u0600-\u06FF]))/g;
+
+  function normalizeTrailingPunctuation(el, toRtl) {
+    if (!el || !el.isConnected) return;
+
+    if (toRtl) {
+      const text = el.textContent || '';
+      if (!text || !/[a-zA-Z0-9][\.\?\!\:\,\;]/.test(text)) return;
+    } else {
+      if (!el.hasAttribute(HAS_PUNCT_ATTR)) return;
+    }
+
+    // Determine the language of each explicit line as a whole. A bilingual
+    // example can contain an English sentence followed by <br> and Hebrew;
+    // the Hebrew translation must not add an RLM to the English sentence.
+    const lines = [[]];
+    const walk = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        lines[lines.length - 1].push(node);
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        if (matches(node, TECHNICAL_CONTENT) || matches(node, AUXILIARY_UI)) return;
+        if (node !== el && matches(node, SEMANTIC_TEXT)) return;
+        if (matches(node, 'br')) { lines.push([]); return; }
+        for (const child of Array.from(node.childNodes)) walk(child);
+      }
+    };
+    walk(el);
+
+    for (const line of lines) {
+      if (toRtl && !RTL_CHAR_PATTERN.test(line.map(node => node.nodeValue).join(''))) continue;
+      for (const node of line) {
+        const val = node.nodeValue;
+        if (toRtl) {
+          const updated = val.replace(TRAILING_PUNCT_RE, '$1$2\u200F');
+          if (updated !== val) {
+            node.nodeValue = updated;
+            el.setAttribute(HAS_PUNCT_ATTR, '1');
+          }
+        } else {
+          if (val.includes(RLM_CHAR)) {
+            node.nodeValue = val.replaceAll(RLM_CHAR, '');
+          }
+        }
+      }
+    }
+    if (!toRtl) {
+      el.removeAttribute(HAS_PUNCT_ATTR);
+    }
+  }
+
   function markText(el) {
     if (!el?.isConnected) return;
     const text = el.textContent?.trim();
     if (!text || excludedText(el)) {
       el.removeAttribute?.(TEXT_ATTR);
+      if (el.getAttribute?.('dir') === 'rtl') el.removeAttribute?.('dir');
+      el.style?.removeProperty?.('direction');
+      el.style?.removeProperty?.('text-align');
       return;
     }
     const isRtl = RTL_CHAR_PATTERN.test(text);
-    el.setAttribute(TEXT_ATTR, isRtl ? 'rtl' : 'ltr');
-    normalizeArrows(el, isRtl && isRtlMode());
+    const modeRtl = isRtlMode();
+
+    if (isRtl && modeRtl) {
+      el.setAttribute(TEXT_ATTR, 'rtl');
+      el.setAttribute('dir', 'rtl');
+      el.style.setProperty('direction', 'rtl', 'important');
+      el.style.setProperty('text-align', 'right', 'important');
+    } else {
+      el.setAttribute(TEXT_ATTR, isRtl ? 'rtl' : 'ltr');
+      if (el.getAttribute('dir') === 'rtl') el.removeAttribute('dir');
+      el.style.removeProperty('direction');
+      el.style.removeProperty('text-align');
+    }
+
+    normalizeArrows(el, isRtl && modeRtl);
+    normalizeTrailingPunctuation(el, isRtl && modeRtl);
   }
 
   function markTechnical(root) {
@@ -404,6 +500,7 @@
           const cellText = cell.textContent?.trim() || '';
           const cellIsRtl = RTL_CHAR_PATTERN.test(cellText);
           normalizeArrows(cell, cellIsRtl && isRtlMode());
+          normalizeTrailingPunctuation(cell, cellIsRtl && isRtlMode());
         }
       }
     }
@@ -436,6 +533,10 @@
 
     for (const el of candidates) {
       if (excludedText(el)) continue;
+      // ChatGPT wraps ordinary inline runs (including spaces around strong/bdi)
+      // in spans. Isolating each run reverses English fragments in RTL prose and
+      // collapses boundary spaces. The enclosing prose element owns direction.
+      if (matches(el, 'span') && el.parentElement?.closest(SEMANTIC_TEXT)) continue;
       const directText = Array.from(el.childNodes).some(
         (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()
       );
@@ -467,7 +568,11 @@
   }
 
   function scanConversation(root = document) {
-    for (const turn of topLevelTurns(root)) markTurn(turn);
+    const turns = topLevelTurns(root);
+    for (const turn of turns) markTurn(turn);
+    for (const el of qsa(root, SEMANTIC_TEXT)) markText(el);
+    markStructuredProse(root, root);
+    markTechnical(root);
   }
 
   function scanAdded(root) {
@@ -481,18 +586,18 @@
     }
 
     const turn = root.closest?.(TURN_SELECTOR);
-    if (!turn) return;
+    const boundary = turn || root;
 
     const known = matches(root, KNOWN_TEXT_ROOTS) ? root : root.closest?.(KNOWN_TEXT_ROOTS);
-    if (known && turn.contains(known)) markKnownRoot(known);
+    if (known && boundary.contains(known)) markKnownRoot(known);
     for (const nested of qsa(root, KNOWN_TEXT_ROOTS)) markKnownRoot(nested);
 
     if (matches(root, SEMANTIC_TEXT)) markText(root);
     for (const el of qsa(root, SEMANTIC_TEXT)) markText(el);
 
-    markStructuredProse(root, turn);
+    markStructuredProse(root, boundary);
     markTechnical(root);
-    markDirectFallback(root, turn);
+    markDirectFallback(root, boundary);
   }
 
   const PLACEMENT_SIGNAL = [...COMPOSER_FORMS, ...EDITORS, ...DICTATION_CONTROLS, ...SEND_CONTROLS, ...TRAILING_AREAS].join(',');

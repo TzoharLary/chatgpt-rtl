@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "RTL for ChatGPT",
   "short_name": "RTL Helper",
-  "version": "0.5.8",
+  "version": "0.6.2",
   "description": "One-click RTL/LTR for ChatGPT conversations and composer, with safe handling for code, math, lists, links, and tables.",
   "permissions": [
     "storage"

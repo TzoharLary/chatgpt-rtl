@@ -72,13 +72,19 @@ else
   "$browser" "${args[@]}" >"$out" 2>"$err" || true
 fi
 
-if grep -q '<pre id="results">PASS</pre>' "$out"; then
+if grep -q -E '<pre id="results"[^>]*>PASS</pre>' "$out"; then
   echo "Synthetic ChatGPT DOM harness: OK"
   exit 0
 fi
 
 echo "Synthetic DOM harness did not pass ($url)." >&2
-grep -o '<pre id="results">[^<]*</pre>' "$out" >&2 || true
+python3 - "$out" <<'PY' >&2
+import html, re, sys
+from pathlib import Path
+result = re.search(r'<pre id="results"[^>]*>(.*?)</pre>', Path(sys.argv[1]).read_text(), re.S)
+if result:
+    print(html.unescape(result.group(1)))
+PY
 if [[ ! -s "$out" ]]; then
   echo "Browser produced no DOM output; this usually means the local headless browser itself failed before the fixture ran." >&2
 fi

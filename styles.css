@@ -9,9 +9,21 @@ html[data-chatgpt-rtl-mode="rtl"] :is(
   [data-markdown-text-style="assistant-message"],
   .markdown,
   .prose,
+  div[class*="markdown"],
+  div[class*="prose"],
+  div[class*="text-message"],
   [data-user-message-bubble],
   [data-user-message-copy],
-  [data-testid="user-message"]
+  [data-testid="user-message"],
+  [data-testid="assistant-message"],
+  [data-message-role="assistant"],
+  [data-message-role="user"],
+  [data-message-author-role="assistant"],
+  [data-message-author-role="user"],
+  li[data-message-role],
+  div[data-message-role],
+  [data-assistant-stream-block],
+  article
 ) {
   direction: rtl !important;
   text-align: right !important;
@@ -21,9 +33,21 @@ html[data-chatgpt-rtl-mode="ltr"] :is(
   [data-markdown-text-style="assistant-message"],
   .markdown,
   .prose,
+  div[class*="markdown"],
+  div[class*="prose"],
+  div[class*="text-message"],
   [data-user-message-bubble],
   [data-user-message-copy],
-  [data-testid="user-message"]
+  [data-testid="user-message"],
+  [data-testid="assistant-message"],
+  [data-message-role="assistant"],
+  [data-message-role="user"],
+  [data-message-author-role="assistant"],
+  [data-message-author-role="user"],
+  li[data-message-role],
+  div[data-message-role],
+  [data-assistant-stream-block],
+  article
 ) {
   direction: ltr !important;
   text-align: left !important;
@@ -47,6 +71,13 @@ html[data-chatgpt-rtl-mode="ltr"] :is([data-chatgpt-rtl-text="1"], [data-chatgpt
   direction: ltr !important;
   text-align: left !important;
   unicode-bidi: isolate !important;
+}
+
+/* A quoted English example and its Hebrew translation can share one paragraph
+ * separated by br. Resolve each explicit line's base direction independently;
+ * ordinary inline spans/strong remain in the same continuous text flow. */
+html[data-chatgpt-rtl-mode="rtl"] p[data-chatgpt-rtl-text="rtl"]:has(br) {
+  unicode-bidi: plaintext !important;
 }
 
 /* The runtime marks whichever editor it positively identifies as the main

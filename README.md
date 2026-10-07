@@ -15,10 +15,10 @@ It is designed for Hebrew and other right-to-left languages while deliberately l
 - Keeps inline code, code blocks, keyboard/preformatted text, and math LTR.
 - Keeps markdown table column order stable while centering cell and header content in RTL mode to cleanly balance mixed Hebrew text, English model identifiers, numbers, and currency values.
 - Fixes ordered/unordered list direction and logical indentation, including nested lists.
-- Isolates prose leaves with `unicode-bidi: isolate` for natural Hebrew/Arabic flow and zero whitespace loss around inline styling (`<strong>`, `<code>`), anchoring trailing neutral punctuation (`.`, `?`, `!`, `:`) after English words to the far left in RTL.
+- Isolates prose blocks with `unicode-bidi: isolate` while keeping ordinary inline spans and bold text in one continuous text flow. English examples followed by a Hebrew translation after a line break use per-line direction detection. Trailing punctuation after English words and numbers is anchored in Hebrew prose.
 - Detects purely Latin/English paragraphs and headings within Hebrew turns and isolates them in LTR, preventing punctuation flipping and awkward margins in English blocks.
 - Semantically normalizes horizontal forward flow arrows (`→`, `⇒`, `⟶`) in Hebrew prose to point leftwards (`←`, `⇐`, `⟵`) matching the natural right-to-left reading flow, while preserving rightward arrows in code (`A → B → C`).
-- Reverts converted arrows and restores original flow on mode toggle to LTR.
+- Reverts converted arrows and trailing punctuation anchoring seamlessly on mode toggle to LTR.
 - Supports a native keyboard shortcut (`Alt+Shift+X` / `Option+Shift+X` on Mac) configurable via `chrome://extensions/shortcuts`.
 - Survives SPA navigation, composer replacement, Send/Stop attribute changes, and characterData streaming with narrowly scoped observers.
 - Batches streaming mutations so token-by-token updates do not trigger a full placement scan.
@@ -67,6 +67,8 @@ A browser DOM harness is also included:
 ```
 
 It simulates current ChatGPT composer/message shapes, a search textbox false-positive trap, storage migration, streaming bursts, generic turn fallbacks, composer replacement, attribute-only Send/Stop transitions, code/math/table exceptions, and read-only conversation add/remove lifecycle behavior.
+
+The October 7 inline-text regression and focused authenticated live results are recorded in [`docs/validation-2026-10-07.md`](./docs/validation-2026-10-07.md), including checks performed and remaining validation limits.
 
 See [`docs/bidi-architecture.md`](./docs/bidi-architecture.md) for the bidirectional rendering analysis and [`docs/research.md`](./docs/research.md) for ChatGPT DOM research notes.
 

@@ -27,7 +27,7 @@ ChatGPT's web interface runs as a single-page application (SPA) with a custom Re
 ### Send & Stop Controls
 * In modern builds, the submit button is a unified button carrying both `data-send-label="Send message"` and `data-stop-label="Stop generating"` as permanent attributes. Its active state is determined by `aria-label`.
 * The trailing control row is identified by `[data-composer-trailing]` or `[data-testid="composer-trailing-actions"]`.
-* The extension injects its on-page toggle directly preceding the active Send/Stop slot in this row.
+* The extension prefers to inject its on-page toggle before dictation/microphone controls, with the active Send/Stop slot as a fallback.
 
 ---
 
@@ -35,7 +35,7 @@ ChatGPT's web interface runs as a single-page application (SPA) with a custom Re
 
 Naïve DOM observers that trigger full-tree scans on every `characterData` mutation cause significant CPU spikes during token-by-token streaming.
 
-To eliminate performance overhead:
+To limit redundant scanning:
 1. **Separation of Concerns:**
    * **Content marking:** Batched and debounced (`CONTENT_SCAN_DELAY_MS`) via `contentQueue: new Set()`. Deduplicated to avoid redundant subtree traversals.
    * **Placement scans:** Only triggered by structural lifecycle events (composer mounting, turn addition, route changes).
@@ -49,4 +49,8 @@ To eliminate performance overhead:
 * **Manifest V3:** Pure client-side extension without external background processes.
 * **Minimal Permissions:** Only the `storage` permission is declared (for persisting the user's RTL/LTR preference across sessions and profiles).
 * **Zero Telemetry:** No analytics, remote scripts, or external network requests.
-* **Local Isolation:** Custom styles are scoped strictly via root and dataset selectors (`data-chatgpt-rtl-*`), ensuring the surrounding ChatGPT application shell (sidebar, navigation, settings, modals) remains unaltered.
+* **Style scope:** The root mode attribute enables conversation/editor styles and runtime markers distinguish prose from technical or auxiliary UI. Compatibility selectors and semantic fallbacks are broader than those markers; see [`bidi-architecture.md`](./bidi-architecture.md) for their validation limits.
+
+## 5. Authenticated inline-markup observation — 2026-10-07
+
+In the inspected conversation, ChatGPT wrapped ordinary inline text runs in `span`, including text inside `strong` and text adjacent to `bdi`. A single `p` could contain an English example followed by `br` and its Hebrew translation. These spans are formatting runs, not independent prose blocks: giving each one `unicode-bidi: isolate` reordered English fragments and hid boundary spaces. The corrected implementation and the limits of the live checks are recorded in [`bidi-architecture.md`](./bidi-architecture.md) and [`validation-2026-10-07.md`](./validation-2026-10-07.md). This observation describes the inspected deployment, not every ChatGPT rollout.

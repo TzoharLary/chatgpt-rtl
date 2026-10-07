@@ -28,9 +28,19 @@
           <p id="trailing-dot">של חוזה השדה וה-selector.</p>
           <p id="trailing-q">איך לזהות ש-fact הוא geographic subset?</p>
           <p id="trailing-excl">באיזה סדר לנסות CompanyFacts ואז filing!</p>
+          <p id="screenshot-a">א. המערכת שומרת את כל הנתונים בתוך Database.</p>
+          <p id="screenshot-b">ב. האם כבר התקנת את התוכנה דרך Chrome?</p>
+          <p id="screenshot-c">ג. מספר המשתמשים הרשומים כרגע הוא 2733.</p>
+          <p id="screenshot-d">ד. האם מספר הרשומות הכולל הוא 3884934?</p>
           <div class="unknown"><span id="direct">טקסט ישיר</span></div>
           <ul id="list"><li id="li">פריט ראשון<ul id="nested-list"><li>תת פריט</li></ul></li><li id="trailing-li">איך לזהות ש-fact הוא geographic subset?</li></ul>
           <p id="pure-en">The user logs in, is authenticated, and then gains access to the system.</p>
+          <!-- Live ChatGPT markup from the October 7 screenshots: inline spans
+               split formatting runs, not independent paragraphs. -->
+          <p id="growing-translation"><strong><span>growing children = </span><bdi>ילדים שגדלים / ילדים בגיל הגדילה</bdi></strong></p>
+          <blockquote><p id="given-example"><span>I recommend that he </span><strong><span>be given</span></strong><span> another chance.</span><br><span>אני ממליץ </span><strong><span>שתינתן לו</span></strong><span> הזדמנות נוספת.</span></p></blockquote>
+          <p id="given-translation"><strong><span>given = </span><bdi>סביל</bdi></strong><span> ❌</span></p>
+          <blockquote><p id="given-valid-example"><strong><span>Children are given vitamins.</span></strong><br><span>לילדים ניתנים ויטמינים / הילדים מקבלים ויטמינים.</span></p></blockquote>
           <h4 id="pure-en-head">English without arrows:</h4>
           <p id="hebrew-arrows">קלט משתמש → עיבוד → אימות → שמירה.</p>
           <p id="hebrew-double-arrow">הסיסמה תקינה ⇒ המשתמש מורשה להיכנס.</p>
@@ -110,7 +120,7 @@
         assert(document.getElementById('prompt-textarea').hasAttribute('data-chatgpt-rtl-composer'), 'composer should be positively marked');
 
         assert(getComputedStyle(document.getElementById('assistant-root')).direction === 'rtl', 'assistant root should be RTL in RTL mode');
-        for (const id of ['user-text','hebrew','mixed-inline','trailing-dot','trailing-q','trailing-excl','direct','li','trailing-li','combined-user','combined-assistant']) {
+        for (const id of ['user-text','hebrew','mixed-inline','trailing-dot','trailing-q','trailing-excl','screenshot-a','screenshot-b','screenshot-c','screenshot-d','direct','li','trailing-li','combined-user','combined-assistant']) {
           assert(getComputedStyle(document.getElementById(id)).direction === 'rtl', `${id} should be RTL`);
         }
         assert(getComputedStyle(document.getElementById('mixed-inline')).unicodeBidi === 'isolate', 'prose should use unicode-bidi: isolate');
@@ -123,20 +133,91 @@
           const rects = [];
           for (const tn of textNodes) {
             for (let i = 0; i < tn.textContent.length; i++) {
+              const char = tn.textContent[i];
+              if (char === '\u200F') continue;
               const r = document.createRange();
               r.setStart(tn, i);
               r.setEnd(tn, i + 1);
-              rects.push({ char: tn.textContent[i], left: Math.round(r.getBoundingClientRect().left) });
+              rects.push({ char: char, left: Math.round(r.getBoundingClientRect().left) });
             }
           }
           rects.sort((a,b) => a.left - b.left);
           return rects.map(x => x.char).join('');
         };
 
+        const assertInlineFlow = () => {
+          const example = document.getElementById('given-example');
+          const runs = Array.from(example.children).slice(0, 3).map(el => {
+            const node = el.tagName === 'STRONG' ? el.firstChild.firstChild : el.firstChild;
+            const range = document.createRange();
+            range.setStart(node, node.textContent.search(/\S/));
+            range.setEnd(node, node.textContent.trimEnd().length);
+            return range.getBoundingClientRect();
+          });
+          assert(runs[0].left < runs[1].left && runs[1].left < runs[2].left,
+            'English sentence with bold spans must retain I recommend / be given / another chance order');
+          assert(runs[1].left - runs[0].right > 2, 'space before be given must remain visible');
+          assert(runs[2].left - runs[1].right > 2, 'space after be given must remain visible');
+          for (const id of ['growing-translation', 'given-translation']) {
+            const p = document.getElementById(id);
+            const span = p.querySelector('span');
+            const node = span.firstChild;
+            const range = document.createRange();
+            // The final non-space character is =. Its left edge must be
+            // separated from the RTL bdi's right edge by the source space.
+            range.setStart(node, node.length - 2);
+            range.setEnd(node, node.length - 1);
+            const equal = range.getBoundingClientRect();
+            const hebrew = p.querySelector('bdi').getBoundingClientRect();
+            assert(Math.max(equal.left - hebrew.right, hebrew.left - equal.right) > 2,
+              `${id}: space between = and Hebrew must remain visible`);
+          }
+        };
+        assertInlineFlow();
+        const assertEnglishLine = (id, expected) => {
+          const p = document.getElementById(id);
+          const chars = [];
+          for (const el of p.children) {
+            if (el.tagName === 'BR') break;
+            const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+            while (walker.nextNode()) {
+              const node = walker.currentNode;
+              for (let i = 0; i < node.length; i++) {
+                const char = node.nodeValue[i];
+                if (/\s|\u200F/.test(char)) continue;
+                const range = document.createRange();
+                range.setStart(node, i);
+                range.setEnd(node, i + 1);
+                const rect = range.getBoundingClientRect();
+                chars.push({ char, x: rect.left, y: Math.round(rect.top) });
+              }
+            }
+          }
+          chars.sort((a, b) => a.y - b.y || a.x - b.x);
+          assert(chars.map(c => c.char).join('') === expected.replace(/\s/g, ''),
+            `${id}: English words and final period must retain visual order`);
+        };
+        const assertEnglishExamples = () => {
+          assertEnglishLine('given-example', 'I recommend that he be given another chance.');
+          assertEnglishLine('given-valid-example', 'Children are given vitamins.');
+        };
+        assertEnglishExamples();
+        const sourceExample = 'I recommend that he be given another chance.אני ממליץ שתינתן לו הזדמנות נוספת.';
+        assert(document.getElementById('given-example').textContent === sourceExample,
+          'bilingual example must not gain invisible punctuation marks');
+        const example = document.getElementById('given-example');
+        example.style.width = '240px';
+        assertEnglishExamples();
+        example.style.removeProperty('width');
+
         assert(getVisualText(document.getElementById('trailing-dot')).startsWith('.selector'), 'period must render at far left');
         assert(getVisualText(document.getElementById('trailing-q')).startsWith('?geographic subset'), 'question mark must render at far left');
         assert(getVisualText(document.getElementById('trailing-excl')).startsWith('!filing'), 'exclamation mark must render at far left');
         assert(getVisualText(document.getElementById('trailing-li')).startsWith('?geographic subset'), 'list item question mark must render at far left');
+        assert(getVisualText(document.getElementById('screenshot-a')).startsWith('.Database'), 'screenshot A: period must render at far left of Database');
+        assert(getVisualText(document.getElementById('screenshot-b')).startsWith('?Chrome'), 'screenshot B: question mark must render at far left of Chrome');
+        assert(getVisualText(document.getElementById('screenshot-c')).startsWith('.2733'), 'screenshot C: period must render at far left of 2733');
+        assert(getVisualText(document.getElementById('screenshot-d')).startsWith('?3884934'), 'screenshot D: question mark must render at far left of 3884934');
 
         const strongEl = document.getElementById('strong-word');
         const textBefore = strongEl.previousSibling;
@@ -177,14 +258,32 @@
         host.shadowRoot.querySelector('button').click();
         await sleep(80);
         assert(document.documentElement.dataset.chatgptRtlMode === 'ltr', 'UI button should toggle LTR');
+        assertInlineFlow();
+        assertEnglishExamples();
         assert(getComputedStyle(document.getElementById('assistant-root')).direction === 'ltr', 'assistant root should switch LTR');
         assert(getComputedStyle(document.getElementById('hebrew')).direction === 'ltr', 'prose should switch LTR');
         assert(getComputedStyle(document.getElementById('prompt-textarea')).direction === 'ltr', 'composer should switch LTR');
         assert(document.getElementById('hebrew-arrows').textContent.includes('→'), 'Hebrew arrows must revert to rightwards in LTR mode');
+        assert(!document.getElementById('screenshot-a').textContent.includes('\u200F'), 'RLM must be removed on LTR toggle');
+        assert(!document.getElementById('screenshot-c').textContent.includes('\u200F'), 'RLM must be removed on LTR toggle for numbers');
         await window.__emitExtensionMessage({ type: 'chatgpt-rtl:toggle' });
         await sleep(80);
         assert(document.documentElement.dataset.chatgptRtlMode === 'rtl', 'toolbar message path should toggle back RTL');
+        assertInlineFlow();
+        assertEnglishExamples();
+        // Streaming may insert or update an inline span directly, rather than
+        // delivering its entire parent paragraph to the content scanner.
+        const inlineStream = document.getElementById('given-example').firstElementChild;
+        inlineStream.firstChild.nodeValue = 'I recommend that he really ';
+        await sleep(180);
+        assert(!inlineStream.hasAttribute('data-chatgpt-rtl-text'), 'streamed inline spans must not become prose islands');
+        assertEnglishLine('given-example', 'I recommend that he really be given another chance.');
+        inlineStream.firstChild.nodeValue = 'I recommend that he ';
+        await sleep(180);
+        assertInlineFlow();
         assert(document.getElementById('hebrew-arrows').textContent.includes('←'), 'Hebrew arrows must re-convert to leftwards on toggle back');
+        assert(getVisualText(document.getElementById('screenshot-a')).startsWith('.Database'), 'screenshot A must re-anchor on toggle back');
+        assert(getVisualText(document.getElementById('screenshot-c')).startsWith('.2733'), 'screenshot C must re-anchor on toggle back');
 
         send.dataset.testid = 'stop-button';
         send.setAttribute('aria-label', 'Stop generating');

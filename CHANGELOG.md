@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.6.2 — 2026-10-07
+
+- Fixed reordered English sentence fragments and disappearing spaces in ChatGPT's inline `span`/`strong`/`bdi` markup. Inline runs inside semantic prose now inherit the paragraph's text flow instead of becoming separate directional islands.
+- Resolve English examples and Hebrew translations separated by `br` independently, preserving English sentence punctuation without inserting RTL marks into English lines.
+- Added regression cases based on the live DOM behind the October 7 screenshots, including visual word order, measured spaces, narrow wrapping, streaming text updates, and RTL/LTR toggles.
+- Recorded the focused authenticated live validation and its limits in `docs/validation-2026-10-07.md`; reconciled the bidi architecture documentation with the tested implementation.
+
+## 0.6.0 — 2026-10-06
+
+- Modernized turn and message detection for modern 2026 ChatGPT DOM (`li[data-message-role="assistant"]`, `li[data-message-role="user"]`, `[data-assistant-stream-block]`, `div[data-message-role]`).
+- Expanded fallback scanning in `scanConversation` and `scanAdded` to cover semantic text elements (`p`, `li`, `blockquote`, headings) when familiar message wrappers are absent.
+- Fixed exclusion bug for user message bubbles: OpenAI wraps prompt bubbles in `<button data-user-message-bubble>`, which previously triggered interactive button exclusion. Added explicit exemption so user messages are always processed.
+- Added live streaming block and direction attributes (`dir`, `data-assistant-stream-block`, `data-message-complete`, `data-assistant-content-started`) to the `MutationObserver` filter in `ui.js`.
+- Expanded `styles.css` message containers with modern role attributes and streaming block selectors.
+
+## 0.5.9 — 2026-10-06
+
+- Fixed trailing neutral punctuation (`.`, `?`, `!`, `:`, `,`) jumping to the right side of English terms and numbers at sentence ends in RTL mode (e.g., `Database.`, `Chrome?`, `2733.`, `3884934?`).
+- Implemented deterministic Unicode trailing punctuation anchoring (`normalizeTrailingPunctuation`) with reversible standard RLM (`\u200F`) injection directly after trailing punctuation marks terminating Latin words, numbers, and quoted/bracketed expressions.
+- Modernized ChatGPT 2026 UI turn and prose detection across latest Tailwind/DOM mutations (`div[class*="text-message"]`, `div[class*="conversation-turn"]`, `article`, `[data-message-id]`).
+- Hardened composer dictation and action bar detection for updated ChatGPT inline model selector toolbar layout (`High v`, voice modes).
+- Added full roundtrip RLM reversal on mode toggle to LTR (`\u200F` stripped cleanly).
+- Expanded synthetic DOM harness to assert all four live test sentences (`Database.`, `Chrome?`, `2733.`, `3884934?`), verifying periods and question marks render strictly at the far left.
+
 ## 0.5.8 — 2026-10-06
 
 - Centered table cell and header content (`text-align: center !important`) in RTL mode, creating clean, balanced columns across mixed Hebrew text, English model identifiers, numbers, and currency values.
