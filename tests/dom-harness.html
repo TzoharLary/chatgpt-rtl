@@ -113,6 +113,21 @@
         assert(document.documentElement.dataset.chatgptRtlMode === 'rtl', 'default/migrated mode should be RTL');
         assert(typeof window.__store.chatgpt_rtl_mode === 'object', 'old string storage should migrate to a record');
 
+        // Repeated scans and their observer callbacks must settle, even for RTL
+        // prose whose dir/style values are already set.
+        const stableText = document.getElementById('hebrew');
+        const changes = [];
+        const stabilityObserver = new MutationObserver((records) => changes.push(...records));
+        stabilityObserver.observe(stableText, { attributes: true, attributeFilter: ['dir', 'style'] });
+        window.__CHATGPT_RTL_CORE__.scanAdded(stableText);
+        window.__CHATGPT_RTL_CORE__.scanAdded(stableText);
+        await sleep(300);
+        const firstCount = changes.length;
+        await sleep(300);
+        stabilityObserver.disconnect();
+        assert(firstCount === 0 && changes.length === 0,
+          `unchanged RTL prose must not produce mutations or an endless scan loop (got ${changes.length})`);
+
         const host = document.getElementById('chatgpt-rtl-toggle-host');
         const send = document.getElementById('send');
         assert(host?.dataset.placement === 'inline', 'toggle should mount inline');
@@ -295,6 +310,27 @@
         await sleep(250);
         assert(host.nextSibling === send, 'toggle should stay next to Send after streaming ends');
 
+        // A rich composer may contain large code/link documents. They belong
+        // to the editor and must never be marked as conversation content.
+        const editor = document.getElementById('prompt-textarea');
+        const editorBlock = document.createElement('p');
+        editorBlock.innerHTML = 'טיוטה <code>code</code> <a href="#">link</a>';
+        editor.appendChild(editorBlock);
+        window.__CHATGPT_RTL_CORE__.scanConversation(document);
+        await sleep(180);
+        assert(!editorBlock.hasAttribute('data-chatgpt-rtl-text'), 'composer prose must not be scanned');
+        assert(!editorBlock.querySelector('code').hasAttribute('data-chatgpt-rtl-technical'), 'composer code must not be marked');
+        assert(!editorBlock.querySelector('a').hasAttribute('data-chatgpt-rtl-island'), 'composer links must not be marked');
+        const inlineEdit = document.createElement('div');
+        inlineEdit.setAttribute('data-user-message-bubble', '');
+        inlineEdit.innerHTML = '<div contenteditable="true"><p dir="auto">טיוטה</p></div>';
+        document.getElementById('conversation').appendChild(inlineEdit);
+        window.__CHATGPT_RTL_CORE__.scanConversation(document);
+        assert(inlineEdit.querySelector('p').getAttribute('dir') === 'auto', 'inline editor direction must not be rewritten');
+        assert(!inlineEdit.querySelector('p').hasAttribute('data-chatgpt-rtl-text'), 'inline editor content must not be marked');
+        inlineEdit.remove();
+        editorBlock.remove();
+
         const streamed = document.createElement('p');
         streamed.id = 'streamed';
         streamed.appendChild(document.createTextNode(''));
@@ -303,6 +339,28 @@
         await sleep(220);
         assert(streamed.hasAttribute('data-chatgpt-rtl-text'), 'streamed paragraph should be marked after burst mutations');
         assert(getComputedStyle(streamed).direction === 'rtl', 'streamed paragraph should be RTL');
+
+        // A large streamed turn should converge after a burst and a partial edit.
+        const large = document.createElement('section');
+        large.dataset.turn = 'assistant';
+        large.innerHTML = '<div data-assistant-markdown>' + Array.from({length: 80},
+          (_, i) => `<p>שורה ${i} mixed text.</p>`).join('') + '</div>';
+        document.getElementById('conversation').appendChild(large);
+        await sleep(180);
+        const changed = large.querySelector('p');
+        changed.firstChild.nodeValue += ' תוספת';
+        await sleep(180);
+        assert(changed.getAttribute('dir') === 'rtl', 'partial streaming update should remain RTL');
+        const stableChanges = [];
+        const largeObserver = new MutationObserver((records) => stableChanges.push(...records));
+        largeObserver.observe(large, { attributes: true, childList: true, characterData: true, subtree: true });
+        await sleep(200);
+        largeObserver.disconnect();
+        assert(stableChanges.length === 0, `large turn must settle at idle (got ${stableChanges.length})`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+        await sleep(100);
+        assert(changed.getAttribute('dir') === 'rtl', 'SPA navigation scan should preserve RTL');
+        large.remove();
 
         const generic = document.createElement('section');
         generic.dataset.turn = 'assistant';

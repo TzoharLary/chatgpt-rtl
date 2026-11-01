@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.3 — 2026-11-01
+
+- Stop unnecessary observer feedback by writing direction attributes and inline styles only when their values change.
+- Keep content scans and technical markers out of ChatGPT's rich composer and inline editors, preventing repeated editor reconciliation from re-enqueuing scans.
+- Add regression coverage for idle convergence, rich editors, large streamed turns, partial edits and navigation, plus private Chrome trace recording and analysis scripts.
+- Record before-and-after validation on the same authenticated conversation in `docs/performance.md`, including measurement limits.
+
 ## 0.6.2 — 2026-10-07
 
 - Fixed reordered English sentence fragments and disappearing spaces in ChatGPT's inline `span`/`strong`/`bdi` markup. Inline runs inside semantic prose now inherit the paragraph's text flow instead of becoming separate directional islands.

@@ -1,4 +1,4 @@
-# Bidi architecture — RTL for ChatGPT 0.6.2
+# Bidi architecture — RTL for ChatGPT 0.6.3
 
 This document describes the current implementation and the observed October 7
 regression. Validation results and their limits are recorded in

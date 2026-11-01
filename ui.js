@@ -273,7 +273,11 @@
   function queueContent(node, { full = false } = {}) {
     if (full) state.fullScanRequested = true;
     const element = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
-    if (element instanceof Element) state.contentQueue.add(element);
+    // Editors (including inline message editing) are controlled by ChatGPT's
+    // editor. Marking their descendants can trigger editor DOM reconciliation,
+    // which would otherwise enqueue the same content indefinitely.
+    if (element instanceof Element && !element.isContentEditable &&
+        !element.closest('textarea,input,[contenteditable="true"]')) state.contentQueue.add(element);
     if (state.contentTimer) return;
     state.contentTimer = setTimeout(flushContentQueue, CONTENT_SCAN_DELAY_MS);
   }

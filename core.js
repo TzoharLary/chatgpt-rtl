@@ -439,29 +439,47 @@
     }
   }
 
+  function setAttributeIfChanged(el, name, value) {
+    if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+  }
+
+  function setStyleIfChanged(style, name, value, priority) {
+    if (style.getPropertyValue(name) !== value || style.getPropertyPriority(name) !== priority) {
+      style.setProperty(name, value, priority);
+    }
+  }
+
+  function removeStyleIfPresent(style, name) {
+    if (style.getPropertyValue(name) || style.getPropertyPriority(name)) style.removeProperty(name);
+  }
+
   function markText(el) {
     if (!el?.isConnected) return;
+    // Never rewrite an active editor, including an editor inside a user turn.
+    if (el.isContentEditable || el.closest('textarea,input,[contenteditable="true"]')) return;
     const text = el.textContent?.trim();
     if (!text || excludedText(el)) {
       el.removeAttribute?.(TEXT_ATTR);
       if (el.getAttribute?.('dir') === 'rtl') el.removeAttribute?.('dir');
-      el.style?.removeProperty?.('direction');
-      el.style?.removeProperty?.('text-align');
+      if (el.style) {
+        removeStyleIfPresent(el.style, 'direction');
+        removeStyleIfPresent(el.style, 'text-align');
+      }
       return;
     }
     const isRtl = RTL_CHAR_PATTERN.test(text);
     const modeRtl = isRtlMode();
 
     if (isRtl && modeRtl) {
-      el.setAttribute(TEXT_ATTR, 'rtl');
-      el.setAttribute('dir', 'rtl');
-      el.style.setProperty('direction', 'rtl', 'important');
-      el.style.setProperty('text-align', 'right', 'important');
+      setAttributeIfChanged(el, TEXT_ATTR, 'rtl');
+      setAttributeIfChanged(el, 'dir', 'rtl');
+      setStyleIfChanged(el.style, 'direction', 'rtl', 'important');
+      setStyleIfChanged(el.style, 'text-align', 'right', 'important');
     } else {
-      el.setAttribute(TEXT_ATTR, isRtl ? 'rtl' : 'ltr');
+      setAttributeIfChanged(el, TEXT_ATTR, isRtl ? 'rtl' : 'ltr');
       if (el.getAttribute('dir') === 'rtl') el.removeAttribute('dir');
-      el.style.removeProperty('direction');
-      el.style.removeProperty('text-align');
+      removeStyleIfPresent(el.style, 'direction');
+      removeStyleIfPresent(el.style, 'text-align');
     }
 
     normalizeArrows(el, isRtl && modeRtl);
@@ -470,10 +488,15 @@
 
   function markTechnical(root) {
     if (!(root instanceof Element || root instanceof Document)) return;
-    if (root instanceof Element && matches(root, TECHNICAL_CONTENT)) root.setAttribute(TECH_ATTR, '1');
-    for (const el of qsa(root, TECHNICAL_CONTENT)) el.setAttribute(TECH_ATTR, '1');
-    if (root instanceof Element && matches(root, 'a,bdi')) root.setAttribute(ISLAND_ATTR, '1');
-    for (const el of qsa(root, 'a,bdi')) el.setAttribute(ISLAND_ATTR, '1');
+    const markOutsideEditor = (el, attr) => {
+      if (!el.isContentEditable && !el.closest('textarea,input,[contenteditable="true"]')) {
+        setAttributeIfChanged(el, attr, '1');
+      }
+    };
+    if (root instanceof Element && matches(root, TECHNICAL_CONTENT)) markOutsideEditor(root, TECH_ATTR);
+    for (const el of qsa(root, TECHNICAL_CONTENT)) markOutsideEditor(el, TECH_ATTR);
+    if (root instanceof Element && matches(root, 'a,bdi')) markOutsideEditor(root, ISLAND_ATTR);
+    for (const el of qsa(root, 'a,bdi')) markOutsideEditor(el, ISLAND_ATTR);
   }
 
   function structuredExcluded(el, boundary) {
@@ -490,12 +513,12 @@
     if (!(root instanceof Element)) return;
     const lists = matches(root, 'ul,ol') ? [root, ...qsa(root, 'ul,ol')] : qsa(root, 'ul,ol');
     for (const el of lists) {
-      if (!structuredExcluded(el, boundary)) el.setAttribute(LIST_ATTR, '1');
+      if (!structuredExcluded(el, boundary)) setAttributeIfChanged(el, LIST_ATTR, '1');
     }
     const tables = matches(root, 'table') ? [root, ...qsa(root, 'table')] : qsa(root, 'table');
     for (const el of tables) {
       if (!structuredExcluded(el, boundary)) {
-        el.setAttribute(TABLE_ATTR, '1');
+        setAttributeIfChanged(el, TABLE_ATTR, '1');
         for (const cell of qsa(el, 'th,td,caption')) {
           const cellText = cell.textContent?.trim() || '';
           const cellIsRtl = RTL_CHAR_PATTERN.test(cellText);

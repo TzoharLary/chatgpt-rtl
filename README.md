@@ -70,6 +70,8 @@ It simulates current ChatGPT composer/message shapes, a search textbox false-pos
 
 The October 7 inline-text regression and focused authenticated live results are recorded in [`docs/validation-2026-10-07.md`](./docs/validation-2026-10-07.md), including checks performed and remaining validation limits.
 
+See [`docs/performance.md`](./docs/performance.md) for the idle performance regression checks and private trace workflow.
+
 See [`docs/bidi-architecture.md`](./docs/bidi-architecture.md) for the bidirectional rendering analysis and [`docs/research.md`](./docs/research.md) for ChatGPT DOM research notes.
 
 ## Package for Chrome Web Store
