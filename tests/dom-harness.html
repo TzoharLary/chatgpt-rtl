@@ -348,9 +348,43 @@
         document.getElementById('conversation').appendChild(large);
         await sleep(180);
         const changed = large.querySelector('p');
+        const fullScanClosest = Element.prototype.closest;
+        let fullScanCalls = 0;
+        Element.prototype.closest = function (...args) {
+          fullScanCalls += 1;
+          return fullScanClosest.apply(this, args);
+        };
+        window.__CHATGPT_RTL_CORE__.scanConversation(large);
+        Element.prototype.closest = fullScanClosest;
+        assert(fullScanCalls < 500, `full scan should avoid duplicate prose visits (closest calls: ${fullScanCalls})`);
+        const originalClosest = Element.prototype.closest;
+        let closestCalls = 0;
+        Element.prototype.closest = function (...args) {
+          closestCalls += 1;
+          return originalClosest.apply(this, args);
+        };
         changed.firstChild.nodeValue += ' תוספת';
         await sleep(180);
+        Element.prototype.closest = originalClosest;
         assert(changed.getAttribute('dir') === 'rtl', 'partial streaming update should remain RTL');
+        assert(closestCalls < 80, `partial update should not rescan all 80 paragraphs (closest calls: ${closestCalls})`);
+        // Many independent streaming updates must not cause quadratic queue reduction.
+        const originalContains = Element.prototype.contains;
+        let containsCalls = 0;
+        Element.prototype.contains = function (...args) {
+          containsCalls += 1;
+          return originalContains.apply(this, args);
+        };
+        for (const paragraph of large.querySelectorAll('p')) paragraph.firstChild.nodeValue += ' עדכון';
+        await sleep(180);
+        Element.prototype.contains = originalContains;
+        assert(containsCalls < 2000, `queue reduction must not compare every pair (contains calls: ${containsCalls})`);
+        changed.firstChild.nodeValue = 'English text';
+        await sleep(120);
+        assert(changed.getAttribute('data-chatgpt-rtl-text') === 'ltr', 'later updates must reconsider direction');
+        changed.firstChild.nodeValue = 'חזרה לעברית';
+        await sleep(120);
+        assert(changed.getAttribute('dir') === 'rtl', 'later RTL updates must be reprocessed');
         const stableChanges = [];
         const largeObserver = new MutationObserver((records) => stableChanges.push(...records));
         largeObserver.observe(large, { attributes: true, childList: true, characterData: true, subtree: true });
@@ -370,6 +404,30 @@
         await sleep(180);
         assert(document.getElementById('generic-list').hasAttribute('data-chatgpt-rtl-list'), 'generic turn list should be marked');
         assert(document.getElementById('generic-table').hasAttribute('data-chatgpt-rtl-table'), 'generic turn table should be marked');
+        // Partial nested changes still update the enclosing prose and cell.
+        const dynamicText = document.createElement('p');
+        dynamicText.innerHTML = '<span>English text</span>';
+        document.getElementById('assistant-root').appendChild(dynamicText);
+        const dynamicCell = document.getElementById('generic-td');
+        dynamicCell.innerHTML = '<span>עברית → Database.</span>';
+        await sleep(180);
+        dynamicText.firstElementChild.firstChild.nodeValue = 'טקסט עברי';
+        dynamicCell.firstElementChild.firstChild.nodeValue = 'עוד עברית → Database.';
+        await sleep(180);
+        assert(dynamicText.getAttribute('dir') === 'rtl', 'nested streaming must update the enclosing paragraph direction');
+        assert(dynamicCell.textContent.includes('←'), 'partial table-cell updates must normalize RTL arrows');
+        assert(dynamicCell.textContent.includes('\u200F'), 'partial table-cell updates must anchor trailing punctuation');
+        dynamicText.remove();
+        const directTurn = document.createElement('section');
+        directTurn.dataset.turn = 'assistant';
+        directTurn.innerHTML = '<div data-assistant-markdown>English <span>words</span></div>';
+        document.getElementById('conversation').appendChild(directTurn);
+        await sleep(120);
+        const directRoot = directTurn.firstElementChild;
+        directRoot.firstElementChild.firstChild.nodeValue = 'עברית';
+        await sleep(120);
+        assert(directRoot.getAttribute('dir') === 'rtl', 'streaming inside a direct-text message must update its enclosing direction');
+        directTurn.remove();
         assert(getComputedStyle(document.getElementById('generic-li')).direction === 'rtl', 'generic list item should be RTL');
         assert(getComputedStyle(document.getElementById('generic-td')).direction === 'rtl', 'generic table cell should be RTL');
 

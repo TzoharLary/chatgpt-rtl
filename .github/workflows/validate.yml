@@ -17,3 +17,7 @@ jobs:
           node-version: '22'
       - name: Validate extension
         run: ./scripts/validate.sh
+      - name: Test trace analysis
+        run: python3 tests/test-analyze-perf-trace.py
+      - name: Test DOM regressions
+        run: ./scripts/test-dom.sh

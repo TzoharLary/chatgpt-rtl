@@ -253,10 +253,14 @@
   }
 
   function reduceQueuedRoots(nodes) {
-    const connected = nodes.filter((node) => node?.isConnected);
-    return connected.filter((node, index) => !connected.some((other, otherIndex) =>
-      otherIndex !== index && other instanceof Element && node instanceof Element && other.contains(node)
-    ));
+    const connected = nodes.filter((node) => node instanceof Element && node.isConnected);
+    const roots = new Set(connected);
+    return connected.filter((node) => {
+      for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+        if (roots.has(parent)) return false;
+      }
+      return true;
+    });
   }
 
   function flushContentQueue() {
@@ -266,7 +270,10 @@
     const nodes = reduceQueuedRoots([...state.contentQueue]);
     state.contentQueue.clear();
 
-    if (full) core.scanConversation(document);
+    if (full) {
+      core.scanConversation(document);
+      return;
+    }
     for (const node of nodes) core.scanAdded(node);
   }
 
@@ -277,7 +284,11 @@
     // editor. Marking their descendants can trigger editor DOM reconciliation,
     // which would otherwise enqueue the same content indefinitely.
     if (element instanceof Element && !element.isContentEditable &&
-        !element.closest('textarea,input,[contenteditable="true"]')) state.contentQueue.add(element);
+        !element.closest('textarea,input,[contenteditable="true"]')) {
+      state.contentQueue.add(element);
+    } else if (!full) {
+      return;
+    }
     if (state.contentTimer) return;
     state.contentTimer = setTimeout(flushContentQueue, CONTENT_SCAN_DELAY_MS);
   }
@@ -368,8 +379,8 @@
 
   async function init() {
     await loadMode();
+    // applyMode already scans the conversation for the selected mode.
     applyMode(state.mode);
-    core.scanConversation(document);
     placeHost();
 
     state.observer = new MutationObserver(handleMutations);

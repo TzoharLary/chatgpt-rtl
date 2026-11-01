@@ -18,13 +18,17 @@ with open_trace(args.trace, 'rt') as stream:
     trace = json.load(stream)
 events = trace['traceEvents'] if isinstance(trace, dict) else trace
 chunks = [e for e in events if e.get('pid') == args.pid and e.get('name') == 'ProfileChunk']
-nodes = {}
+# Node IDs are local to each CPU profile; a renderer can contain several
+# profiles with the same numeric node IDs (for example, after navigation).
+profiles = collections.defaultdict(dict)
 for chunk in chunks:
+    nodes = profiles[chunk.get('id')]
     for node in chunk['args']['data']['cpuProfile'].get('nodes', []):
         nodes[node['id']] = node
 self_time = collections.Counter()
 inclusive = collections.Counter()
 for chunk in chunks:
+    nodes = profiles[chunk.get('id')]
     data = chunk['args']['data']
     for node_id, delta in zip(data['cpuProfile'].get('samples', []), data.get('timeDeltas', [])):
         node = nodes.get(node_id)

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.4 — 2026-11-01
+
+- Limit incremental rescans to changed content and the relevant containing prose, direct-text message root or table cell.
+- Avoid revisiting prose during a full scan, an extra startup scan, unnecessary fallback selector work and quadratic queue-root comparisons.
+- Add regression cases for large messages, streaming updates, inline direction changes, table cells, queue bursts and trace-profile isolation; document measurements and their limits.
+
 ## 0.6.3 — 2026-11-01
 
 - Stop unnecessary observer feedback by writing direction attributes and inline styles only when their values change.

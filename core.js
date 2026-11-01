@@ -453,10 +453,13 @@
     if (style.getPropertyValue(name) || style.getPropertyPriority(name)) style.removeProperty(name);
   }
 
-  function markText(el) {
-    if (!el?.isConnected) return;
+  function markText(el, seen) {
+    if (!el?.isConnected || seen?.has(el)) return;
     // Never rewrite an active editor, including an editor inside a user turn.
     if (el.isContentEditable || el.closest('textarea,input,[contenteditable="true"]')) return;
+    // A turn can match several nested selectors. Process each prose element
+    // once per scan, while allowing it to be reconsidered on later updates.
+    seen?.add(el);
     const text = el.textContent?.trim();
     if (!text || excludedText(el)) {
       el.removeAttribute?.(TEXT_ATTR);
@@ -529,24 +532,28 @@
     }
   }
 
-  function markKnownRoot(root) {
-    if (!(root instanceof Element) || !root.isConnected) return;
-    if (matches(root, AUXILIARY_UI) || root.closest?.(AUXILIARY_UI)) return;
-
-    for (const el of qsa(root, SEMANTIC_TEXT)) markText(el);
-    markStructuredProse(root, root);
-    markTechnical(root);
-
-    if (matches(root, 'div,span')) {
-      const directText = Array.from(root.childNodes).some(
-        (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()
-      );
-      const hasBlocks = root.querySelector('p,div,ul,ol,pre,table,blockquote');
-      if (directText && !hasBlocks) markText(root);
+  function markDirectKnownRoot(root, seen) {
+    if (!matches(root, 'div,span')) return;
+    if (root.querySelector('p,div,ul,ol,pre,table,blockquote')) return;
+    for (const node of root.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+        markText(root, seen);
+        return;
+      }
     }
   }
 
-  function markDirectFallback(root, turn) {
+  function markKnownRoot(root, seen) {
+    if (!(root instanceof Element) || !root.isConnected) return;
+    if (matches(root, AUXILIARY_UI) || root.closest?.(AUXILIARY_UI)) return;
+
+    for (const el of qsa(root, SEMANTIC_TEXT)) markText(el, seen);
+    markStructuredProse(root, root);
+    markTechnical(root);
+    markDirectKnownRoot(root, seen);
+  }
+
+  function markDirectFallback(root, turn, seen) {
     const role = turnRole(turn);
     if (role !== 'user' && role !== 'assistant' && !matches(turn, '[data-turn-key]')) return;
 
@@ -555,27 +562,29 @@
     candidates.push(...qsa(root, 'div,span'));
 
     for (const el of candidates) {
-      if (excludedText(el)) continue;
-      // ChatGPT wraps ordinary inline runs (including spaces around strong/bdi)
-      // in spans. Isolating each run reverses English fragments in RTL prose and
-      // collapses boundary spaces. The enclosing prose element owns direction.
-      if (matches(el, 'span') && el.parentElement?.closest(SEMANTIC_TEXT)) continue;
-      const directText = Array.from(el.childNodes).some(
-        (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()
-      );
+      let directText = false;
+      for (const node of el.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+          directText = true;
+          break;
+        }
+      }
       if (!directText || el.querySelector('p,div,ul,ol,pre,table,blockquote')) continue;
-      markText(el);
+      // Ordinary inline runs inherit direction from the enclosing prose block.
+      if (matches(el, 'span') && el.parentElement?.closest(SEMANTIC_TEXT)) continue;
+      if (excludedText(el)) continue;
+      markText(el, seen);
     }
   }
 
-  function markTurn(turn) {
+  function markTurn(turn, seen) {
     if (!turn?.isConnected) return;
-    if (matches(turn, KNOWN_TEXT_ROOTS)) markKnownRoot(turn);
-    for (const root of qsa(turn, KNOWN_TEXT_ROOTS)) markKnownRoot(root);
-    for (const el of qsa(turn, SEMANTIC_TEXT)) markText(el);
+    if (matches(turn, KNOWN_TEXT_ROOTS)) markKnownRoot(turn, seen);
+    for (const root of qsa(turn, KNOWN_TEXT_ROOTS)) markKnownRoot(root, seen);
+    for (const el of qsa(turn, SEMANTIC_TEXT)) markText(el, seen);
     markStructuredProse(turn, turn);
     markTechnical(turn);
-    markDirectFallback(turn, turn);
+    markDirectFallback(turn, turn, seen);
   }
 
   function topLevelTurns(root = document) {
@@ -591,20 +600,22 @@
   }
 
   function scanConversation(root = document) {
+    const seen = new Set();
     const turns = topLevelTurns(root);
-    for (const turn of turns) markTurn(turn);
-    for (const el of qsa(root, SEMANTIC_TEXT)) markText(el);
+    for (const turn of turns) markTurn(turn, seen);
+    for (const el of qsa(root, SEMANTIC_TEXT)) markText(el, seen);
     markStructuredProse(root, root);
     markTechnical(root);
   }
 
   function scanAdded(root) {
     if (!(root instanceof Element)) return;
-    if (matches(root, TURN_SELECTOR)) { markTurn(root); return; }
+    const seen = new Set();
+    if (matches(root, TURN_SELECTOR)) { markTurn(root, seen); return; }
 
     const turns = topLevelTurns(root);
     if (turns.length) {
-      for (const turn of turns) markTurn(turn);
+      for (const turn of turns) markTurn(turn, seen);
       return;
     }
 
@@ -612,15 +623,29 @@
     const boundary = turn || root;
 
     const known = matches(root, KNOWN_TEXT_ROOTS) ? root : root.closest?.(KNOWN_TEXT_ROOTS);
-    if (known && boundary.contains(known)) markKnownRoot(known);
-    for (const nested of qsa(root, KNOWN_TEXT_ROOTS)) markKnownRoot(nested);
+    if (known === root) markKnownRoot(root, seen);
+    else if (known && boundary.contains(known) && !known.closest(AUXILIARY_UI)) markDirectKnownRoot(known, seen);
+    for (const nested of qsa(root, KNOWN_TEXT_ROOTS)) markKnownRoot(nested, seen);
 
-    if (matches(root, SEMANTIC_TEXT)) markText(root);
-    for (const el of qsa(root, SEMANTIC_TEXT)) markText(el);
+    // An inline change can change the direction of its enclosing paragraph or
+    // list item. Revisit that block rather than every sibling in a message.
+    const prose = root.parentElement?.closest(SEMANTIC_TEXT);
+    if (prose && boundary.contains(prose)) markText(prose, seen);
+
+    // Table cells are normalized as units even when an inline child changes.
+    const cell = root.closest('th,td,caption');
+    if (cell && boundary.contains(cell) && !structuredExcluded(cell, boundary)) {
+      const cellIsRtl = RTL_CHAR_PATTERN.test(cell.textContent?.trim() || '');
+      normalizeArrows(cell, cellIsRtl && isRtlMode());
+      normalizeTrailingPunctuation(cell, cellIsRtl && isRtlMode());
+    }
+
+    if (matches(root, SEMANTIC_TEXT)) markText(root, seen);
+    for (const el of qsa(root, SEMANTIC_TEXT)) markText(el, seen);
 
     markStructuredProse(root, boundary);
     markTechnical(root);
-    markDirectFallback(root, boundary);
+    markDirectFallback(root, boundary, seen);
   }
 
   const PLACEMENT_SIGNAL = [...COMPOSER_FORMS, ...EDITORS, ...DICTATION_CONTROLS, ...SEND_CONTROLS, ...TRAILING_AREAS].join(',');

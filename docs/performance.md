@@ -13,7 +13,8 @@ link elements inside editors. Composer identification, placement and its mode
 styling remain active. The DOM harness exercises idle convergence, large streamed
 turns, partial changes, navigation, editor content and existing bidi behavior.
 
-Run the automated checks with `./scripts/validate.sh` and `./scripts/test-dom.sh`.
+Run the automated checks with `./scripts/validate.sh`, `./scripts/test-dom.sh`,
+and `python3 tests/test-analyze-perf-trace.py`.
 For a short live measurement, explicitly connect Chrome DevTools CLI to the
 intended Chrome profile, verify the page ID and conversation, then run:
 
@@ -54,3 +55,61 @@ covered an RTL → LTR → RTL toggle and selected computed directions in the sa
 conversation. It did not measure an actual response stream or every possible
 ChatGPT layout in the live account. The synthetic harness covers streaming,
 partial edits, tables, code, math, replacement and navigation scenarios.
+
+## Incremental scan and queue follow-up (2026-11-01)
+
+A short profile on the same conversation found that direction toggles could
+queue many independently changed prose elements. The prior queue reduction
+compared each element with every other element; a synthetic burst of 80 sibling
+updates caused 6,320 `contains` calls. The queue now checks the ancestor chain
+against a set of queued elements. A regression test bounds the comparisons.
+
+A second test changes one paragraph in an 80-paragraph message. The previous
+incremental scan made 328 `closest` calls in this fixture because it revisited
+the message's other paragraphs. The updated scan revisits the changed subtree,
+its enclosing prose, direct-text message root, and relevant table cell. A separate local fixture changing
+one paragraph in a 100-paragraph message dropped from 408 to 10 `closest` calls.
+Full scans also use a scan-local set to avoid revisiting the same prose element;
+a 100-paragraph fixture dropped from 1,607 to 707 `closest` calls. These are
+operation counts in synthetic fixtures, not timing or live call counts.
+
+On the authenticated conversation, a trace of the intermediate version still
+sampled approximately 1.95 s inside `flushContentQueue` during a toggle pair;
+a later trace with the final queue and direct-text fixes sampled about 46 ms. These are single observations
+with page state and background activity varying. After the subsequent
+direct-text fix, an eight-second idle trace sampled about 4 ms in `scanAdded`
+and 4.3 ms in `flushContentQueue`; other page activity still caused long tasks. No claim of a universal speedup or
+absence of memory leaks follows from these short traces. Live streaming was not
+performed; nested prose, table cells, RTL/LTR changes and update bursts were
+covered in the synthetic DOM harness.
+
+
+## Follow-up: full-scan costs and measurement limits (2026-11-01)
+
+A full scan used to perform the editor check even for elements already visited
+in the same scan, and the direct-text fallback checked exclusions before
+rejecting elements without direct text. Moving those checks behind inexpensive
+filters reduced `closest` calls in a 100-paragraph synthetic full scan from 707
+to 404. The larger comparison with the original scanner (1,607 calls) is recorded
+above. These counts are fixture-specific, not a universal performance score.
+
+On the authenticated conversation, a profiled RTL/LTR pair took 130–165 ms per
+click before this follow-up, 261–271 ms in an intermediate run, and about 81 ms
+per click in the final run. Each was a single toggle pair, with roughly 145
+marked elements; background activity varied. Google Input Tools contributed
+about 0.9 s and 2.6 s of sampled self time in the first and intermediate trace
+windows. These observations suggest improvement in the final run but do not
+establish a reproducible or universal latency guarantee. Both directions,
+composer and technical content were checked after reloading the final code.
+A five-second independent observer saw no DOM mutation callbacks or Long Tasks
+after stabilization, which is not proof that every idle window is quiet.
+
+A short page-load trace and CDP heap-size metrics were also captured. They have
+no equivalent pre-change load baseline and the heap samples are not a leak test.
+Heap snapshots and a live response stream were not collected; Chrome's real
+session and the test machine's cooling constraints were preserved.
+
+Trace analysis groups CPU nodes per profile ID, because multiple profiles can
+reuse the same node IDs. The corresponding regression test prevents mixing
+samples from separate profiles. Only an explicitly verified page is recorded;
+all traces and conversation identifiers remain outside the repository.

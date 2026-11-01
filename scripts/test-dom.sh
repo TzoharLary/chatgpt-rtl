@@ -60,7 +60,7 @@ args=(
   --disable-gpu
   --disable-dev-shm-usage
   --disable-background-networking
-  --virtual-time-budget=5000
+  --virtual-time-budget=6500
   --dump-dom
   "$url"
 )
