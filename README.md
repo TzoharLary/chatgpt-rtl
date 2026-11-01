@@ -72,6 +72,8 @@ The October 7 inline-text regression and focused authenticated live results are 
 
 See [`docs/performance.md`](./docs/performance.md) for the idle performance regression checks and private trace workflow.
 
+See [`docs/devtools-ai-assistance.md`](./docs/devtools-ai-assistance.md) for reviewing both content scripts with DevTools AI.
+
 See [`docs/bidi-architecture.md`](./docs/bidi-architecture.md) for the bidirectional rendering analysis and [`docs/research.md`](./docs/research.md) for ChatGPT DOM research notes.
 
 ## Package for Chrome Web Store

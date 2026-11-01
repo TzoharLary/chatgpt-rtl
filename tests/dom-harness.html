@@ -102,6 +102,18 @@
     })();
   </script>
   <script src="../core.js"></script>
+  <script>
+    // Observe placement lookups without changing their results.
+    (() => {
+      const core = window.__CHATGPT_RTL_CORE__;
+      const calls = window.__placementCalls = { send: 0, stop: 0, trailing: 0 };
+      window.__CHATGPT_RTL_CORE__ = Object.freeze({ ...core,
+        getSend(...args) { calls.send += 1; return core.getSend(...args); },
+        getStop(...args) { calls.stop += 1; return core.getStop(...args); },
+        getTrailing(...args) { calls.trailing += 1; return core.getTrailing(...args); },
+      });
+    })();
+  </script>
   <script src="../ui.js"></script>
   <script>
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -446,6 +458,18 @@
         document.querySelector('[data-testid="composer-trailing-actions"]').insertBefore(dictationBtn, document.getElementById('new-send'));
         await sleep(250);
         assert(host.nextSibling === dictationBtn, 'toggle should mount immediately before dictation button when present');
+        // The preferred control is already known; placement should not scan
+        // for lower-priority Send, Stop or trailing fallbacks as well.
+        window.__placementCalls.send = window.__placementCalls.stop = window.__placementCalls.trailing = 0;
+        document.getElementById('new-editor').focus();
+        await sleep(180);
+        assert(window.__placementCalls.send === 0 && window.__placementCalls.stop === 0 && window.__placementCalls.trailing === 0,
+          `placement should skip unused fallbacks: ${JSON.stringify(window.__placementCalls)}`);
+        dictationBtn.remove();
+        document.getElementById('new-send').remove();
+        await sleep(250);
+        const trailingVoice = document.querySelector('[data-testid="composer-trailing-actions"] button');
+        assert(host.nextSibling === trailingVoice, 'placement should fall back to a trailing control when preferred buttons disappear');
 
         shell.remove();
         await sleep(300);

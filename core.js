@@ -1,3 +1,6 @@
+// This content script is paired with ui.js, loaded immediately after it by
+// manifest.json. ui.js owns the MutationObserver, batching, composer placement,
+// mode and navigation; assess behavior and performance across both scripts.
 (() => {
   'use strict';
 

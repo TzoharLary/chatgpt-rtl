@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.5 — 2026-11-01
+
+- Avoid searching lower-priority composer controls after a preferred placement anchor has already been found, while preserving Send, Stop and trailing fallbacks.
+- Add placement regression coverage and explain how the `core.js` and `ui.js` content scripts work together for DevTools AI reviews.
+
 ## 0.6.4 — 2026-11-01
 
 - Limit incremental rescans to changed content and the relevant containing prose, direct-text message root or table cell.

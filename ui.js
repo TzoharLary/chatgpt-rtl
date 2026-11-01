@@ -199,14 +199,17 @@
 
     if (composer) {
       const scope = core.composerScope(composer, form);
-      const dictation = core.getDictation(scope);
-      const send = core.getSend(scope);
-      const stop = core.getStop(scope);
-      const trailing = core.getTrailing(scope);
-      const trailingAnchor = trailing
-        ? core.qsa(trailing, 'button,[role="button"]').find((el) => core.visible(el))
-        : null;
-      const anchor = dictation || send || stop || trailingAnchor || core.fallbackAnchor(scope, composer);
+      // Once a preferred control is found, avoid querying every lower-priority
+      // fallback. All returned controls are connected and have a parent.
+      let anchor = core.getDictation(scope) || core.getSend(scope) || core.getStop(scope);
+      let trailing = null;
+      if (!anchor) {
+        trailing = core.getTrailing(scope);
+        const trailingAnchor = trailing
+          ? core.qsa(trailing, 'button,[role="button"]').find((el) => core.visible(el))
+          : null;
+        anchor = trailingAnchor || core.fallbackAnchor(scope, composer);
+      }
       const parent = anchor?.parentElement;
 
       markComposer(composer);

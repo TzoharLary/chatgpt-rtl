@@ -113,3 +113,22 @@ Trace analysis groups CPU nodes per profile ID, because multiple profiles can
 reuse the same node IDs. The corresponding regression test prevents mixing
 samples from separate profiles. Only an explicitly verified page is recorded;
 all traces and conversation identifiers remain outside the repository.
+
+## Composer placement audit (2026-11-01)
+
+The placement routine used to search for dictation, Send, Stop and trailing
+controls on every run even if a higher-priority control had already been found.
+It now searches fallbacks only as needed, preserving the same priority order.
+In a headless fixture with a matching dictation control, one focus-triggered
+placement used 12 versus 4 `querySelectorAll` calls, 6 versus 5 geometry reads,
+and 3 versus 0 regular-expression tests. These counts include the fixture's
+page activity and are not a live time or memory benchmark.
+
+Three focus/blur cycles on the same authenticated conversation were traced
+before and after; the sampled CPU profile contained no frames from this
+extension in either recording. Therefore these traces do not establish a live
+latency improvement or prove those functions never ran. Chrome's forced-reflow
+insight reported no problem in both windows. No heap-snapshot comparison or
+allocation profile was performed, so neither a leak nor its absence was inferred.
+The DOM harness checks both the preferred-anchor short circuit and fallback
+placement after preferred controls are removed.
