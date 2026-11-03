@@ -2,3 +2,5 @@
 *.crx
 *.pem
 chatgpt-rtl.zip
+node_modules/
+test-results/

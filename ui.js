@@ -1,11 +1,6 @@
 (() => {
   'use strict';
 
-  if (typeof window !== 'undefined' && window.location?.search?.includes('__chatgpt_rtl_reload=1')) {
-    chrome.runtime?.sendMessage?.({ action: 'RELOAD_EXTENSION_AND_CLOSE' });
-    return;
-  }
-
   if (globalThis.__CHATGPT_RTL_UI_LOADED__) return;
   globalThis.__CHATGPT_RTL_UI_LOADED__ = true;
 

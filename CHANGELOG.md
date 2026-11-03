@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.6 — 2026-11-03
+
+- Remove a development-only URL trigger that could close a ChatGPT tab and reload other conversations.
+
 ## 0.6.5 — 2026-11-01
 
 - Avoid searching lower-priority composer controls after a preferred placement anchor has already been found, while preserving Send, Stop and trailing fallbacks.

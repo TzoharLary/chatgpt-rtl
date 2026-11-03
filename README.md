@@ -84,6 +84,20 @@ See [`docs/bidi-architecture.md`](./docs/bidi-architecture.md) for the bidirecti
 
 This creates a production-only `chatgpt-rtl.zip` and excludes development files, tests, `.git`, and personal material.
 
+For an isolated, repeatable release check, install Node.js and run:
+
+```bash
+npm ci
+npx playwright install chromium
+./scripts/preflight-store.sh /absolute/path/to/a/new/private-output-directory
+```
+
+The preflight requires a clean committed tree, checks the existing test suites,
+builds that commit in a temporary directory, verifies the archive and runs the
+packaged extension in an isolated Chromium profile. Its JSON report marks the
+separate authenticated Chrome measurement as `not_run`. Live measurements
+and their privacy precautions are documented in `docs/performance.md`.
+
 ## Project structure
 
 ```text
