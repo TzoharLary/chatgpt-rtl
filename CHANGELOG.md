@@ -3,6 +3,7 @@
 ## 0.6.6 — 2026-11-03
 
 - Remove a development-only URL trigger that could close a ChatGPT tab and reload other conversations.
+- Add isolated package preflight checks and clarify local processing of ChatGPT content in the privacy policy.
 
 ## 0.6.5 — 2026-11-01
 

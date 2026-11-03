@@ -1,5 +1,28 @@
 # Idle performance and regression checks
 
+## Release candidate check (2026-11-03)
+
+Chrome 156 reloaded the unpacked extension and displayed version 0.6.6. The
+previously affected authenticated conversation was reopened and refreshed.
+Two idle traces attributed no sampled time to the tracked scan and observer
+functions. The renderer also had two tasks totalling 2067.7 ms and one task
+of 2394.7 ms respectively. These tasks are page-wide observations and are not
+attributed to this extension by those measurements.
+
+One RTL → LTR → RTL toggle pair returned the expected modes. A Hebrew prose
+element computed as RTL and a technical element computed as LTR. In a separate
+activity recording, `closest` had 138.9 ms sampled self time and
+`flushContentQueue` had 35.9 ms sampled inclusive time. Five page-wide long
+tasks totalled 1917.2 ms. These are individual samples rather than process CPU
+percentages or a controlled comparison with the earlier toggle trace.
+
+A separate demonstration prompt produced a response, but the CLI timed out
+while stopping the streaming trace. The gzip file was written, yet the recording
+window and continuous response updates were not independently verified, so
+this is not a validated live streaming performance result. The automated
+packaged-extension test exercises incremental synthetic updates and idle
+convergence. It does not replace a verified trace of a live response.
+
 The content observer batches changes, including `dir` changes. Setting an already
 unchanged `dir` still produces an attribute mutation in Chrome. Repeating that
 write while scanning can therefore feed the observer indefinitely. The scanner

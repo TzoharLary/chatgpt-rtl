@@ -6,6 +6,12 @@ RTL for ChatGPT is designed to run entirely in the browser.
 
 The extension does **not** collect, sell, transmit, or retain conversation content, browsing history, personal information, analytics, or telemetry.
 
+To apply the selected direction, the extension reads and modifies conversation
+text and page elements on ChatGPT locally in your browser. Conversation content
+may include personal communications or other information you enter or view. It
+is used only to provide the direction controls and is not stored or shared by
+the extension.
+
 ## Stored preference
 
 The extension stores only its display preference: whether ChatGPT should be shown in `rtl` or `ltr` mode, plus a local update timestamp used to keep the synced and local copies of that setting consistent.
@@ -19,6 +25,9 @@ The extension makes no network requests of its own and uses no backend service, 
 ## Site access
 
 The content script runs only on the ChatGPT URL patterns declared in `manifest.json` so it can change text direction and add the toggle control.
+
+The extension's use of information complies with the Chrome Web Store User
+Data Policy, including its Limited Use requirements.
 
 ## Toolbar action
 
