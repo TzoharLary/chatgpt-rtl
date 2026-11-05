@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.7 — 2026-11-05
+
+- Replace the extension and Chrome Web Store icon artwork with the selected ChatGPT/RTL design at 16, 48 and 128 pixels.
+- Keep the extension functionality and permissions unchanged.
+
 ## 0.6.6 — 2026-11-03
 
 - Remove a development-only URL trigger that could close a ChatGPT tab and reload other conversations.
