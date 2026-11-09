@@ -1,0 +1,19 @@
+.DS_Store
+*.crx
+*.pem
+chatgpt-rtl.zip
+node_modules/
+test-results/
+
+# Local release, profiling, and demo production materials.
+/docs/performance-local.md
+/docs/devtools-ai-assistance.md
+/docs/validation-2026-10-07.md
+/docs/demo-video/QA.md
+/docs/demo-video/README.md
+/docs/demo-video/thumbnail.jpg
+/docs/demo-video/studio/
+/scripts/preflight-store.py
+/scripts/preflight-store.sh
+/scripts/record-perf-trace.sh
+/.github/workflows/validate-cinematic-video.yml

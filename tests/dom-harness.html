@@ -1,0 +1,498 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ChatGPT RTL DOM harness</title>
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    body { font-family: sans-serif; }
+    form { display:block; width:640px; min-height:80px; }
+    #prompt-textarea, [data-composer-markdown] { display:block; width:520px; min-height:40px; }
+    button { width:32px; height:32px; }
+    .katex { display:inline-block; }
+    .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+  </style>
+</head>
+<body>
+  <aside><form><div id="sidebar-search" contenteditable="true" role="textbox" aria-label="Search chats" style="width:180px;height:30px">חיפוש</div></form></aside>
+  <main id="main">
+    <div id="conversation">
+      <section data-testid="conversation-turn-20" data-turn="user" id="user-turn">
+        <div data-user-message-bubble><div class="whitespace-pre-wrap" id="user-text">שלום from user</div></div>
+      </section>
+      <section data-testid="conversation-turn-21" data-turn="assistant" id="assistant-turn">
+        <h4 class="sr-only" data-conversation-role="assistant" id="role-label">ChatGPT said:</h4>
+        <div data-markdown-text-style="assistant-message" id="assistant-root">
+          <p id="hebrew">שלום עולם with English</p>
+          <p id="mixed-inline">הוא אמר שזה <strong id="strong-word">לא</strong> מקור טוב עבור <code id="inline-code-mixed">CompanyFacts</code> נקודה.</p>
+          <p id="trailing-dot">של חוזה השדה וה-selector.</p>
+          <p id="trailing-q">איך לזהות ש-fact הוא geographic subset?</p>
+          <p id="trailing-excl">באיזה סדר לנסות CompanyFacts ואז filing!</p>
+          <p id="screenshot-a">א. המערכת שומרת את כל הנתונים בתוך Database.</p>
+          <p id="screenshot-b">ב. האם כבר התקנת את התוכנה דרך Chrome?</p>
+          <p id="screenshot-c">ג. מספר המשתמשים הרשומים כרגע הוא 2733.</p>
+          <p id="screenshot-d">ד. האם מספר הרשומות הכולל הוא 3884934?</p>
+          <div class="unknown"><span id="direct">טקסט ישיר</span></div>
+          <ul id="list"><li id="li">פריט ראשון<ul id="nested-list"><li>תת פריט</li></ul></li><li id="trailing-li">איך לזהות ש-fact הוא geographic subset?</li></ul>
+          <p id="pure-en">The user logs in, is authenticated, and then gains access to the system.</p>
+          <!-- Live ChatGPT markup from the October 7 screenshots: inline spans
+               split formatting runs, not independent paragraphs. -->
+          <p id="growing-translation"><strong><span>growing children = </span><bdi>ילדים שגדלים / ילדים בגיל הגדילה</bdi></strong></p>
+          <blockquote><p id="given-example"><span>I recommend that he </span><strong><span>be given</span></strong><span> another chance.</span><br><span>אני ממליץ </span><strong><span>שתינתן לו</span></strong><span> הזדמנות נוספת.</span></p></blockquote>
+          <p id="given-translation"><strong><span>given = </span><bdi>סביל</bdi></strong><span> ❌</span></p>
+          <blockquote><p id="given-valid-example"><strong><span>Children are given vitamins.</span></strong><br><span>לילדים ניתנים ויטמינים / הילדים מקבלים ויטמינים.</span></p></blockquote>
+          <h4 id="pure-en-head">English without arrows:</h4>
+          <p id="hebrew-arrows">קלט משתמש → עיבוד → אימות → שמירה.</p>
+          <p id="hebrew-double-arrow">הסיסמה תקינה ⇒ המשתמש מורשה להיכנס.</p>
+          <p id="code-arrow">בדוק קוד: <code id="inline-code-arrow">A → B → C</code></p>
+          <p>Run <code id="inline-code">npm install</code></p>
+          <pre id="pre"><code>const x = 1;</code></pre>
+          <span class="katex" data-math-source="x^2" id="math">x²</span>
+          <table id="table"><tr><th id="th">כותרת</th><td id="td">123</td><td id="table-arrow">מחיר ↑ → ביקוש ↓</td></tr></table>
+          <p><a id="url" href="https://example.com">https://example.com/a?b=1</a></p>
+          <span role="status" id="status">Thinking…</span>
+          <span data-testid="citation-pill" id="citation">Citation</span>
+        </div>
+      </section>
+      <div data-turn-key="11111111-2222-3333-4444-555555555555" id="combined-turn">
+        <div data-user-message-bubble><div class="whitespace-pre-wrap" id="combined-user">עוד הודעה</div></div>
+        <div data-markdown-text-style="assistant-message"><p id="combined-assistant">עוד תשובה</p></div>
+      </div>
+    </div>
+
+    <form data-chatgpt-composer id="composer-form">
+      <div id="prompt-textarea" data-composer-markdown="true" contenteditable="true" role="textbox">בדיקה</div>
+      <div id="controls"><button type="button" aria-label="Attach files">+</button><button type="button" aria-label="Voice mode">V</button><button type="submit" data-testid="composer-send-button" id="send">S</button></div>
+    </form>
+  </main>
+
+  <pre id="results">RUNNING</pre>
+  <script>
+    (() => {
+      const store = { chatgpt_rtl_mode: 'rtl' };
+      const listeners = [];
+      const messageListeners = [];
+      const api = (area) => ({
+        get: async (key) => ({ [key]: store[key] }),
+        set: async (obj) => {
+          for (const [key, value] of Object.entries(obj)) {
+            const oldValue = store[key];
+            store[key] = value;
+            if (JSON.stringify(oldValue) !== JSON.stringify(value)) {
+              listeners.forEach((fn) => fn({ [key]: { oldValue, newValue: value } }, area));
+            }
+          }
+        }
+      });
+      window.__store = store;
+      window.__emitExtensionMessage = (message) => new Promise((resolve) => {
+        for (const fn of messageListeners) {
+          const async = fn(message, {}, resolve);
+          if (async !== true) resolve(undefined);
+        }
+      });
+      window.chrome = {
+        storage: {
+          sync: api('sync'),
+          local: api('local'),
+          onChanged: { addListener(fn) { listeners.push(fn); } }
+        },
+        runtime: { onMessage: { addListener(fn) { messageListeners.push(fn); } } }
+      };
+    })();
+  </script>
+  <script src="../core.js"></script>
+  <script>
+    // Observe placement lookups without changing their results.
+    (() => {
+      const core = window.__CHATGPT_RTL_CORE__;
+      const calls = window.__placementCalls = { send: 0, stop: 0, trailing: 0 };
+      window.__CHATGPT_RTL_CORE__ = Object.freeze({ ...core,
+        getSend(...args) { calls.send += 1; return core.getSend(...args); },
+        getStop(...args) { calls.stop += 1; return core.getStop(...args); },
+        getTrailing(...args) { calls.trailing += 1; return core.getTrailing(...args); },
+      });
+    })();
+  </script>
+  <script src="../ui.js"></script>
+  <script>
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const assert = (value, message) => { if (!value) throw new Error(message); };
+
+    (async () => {
+      try {
+        await sleep(350);
+        assert(document.documentElement.dataset.chatgptRtlMode === 'rtl', 'default/migrated mode should be RTL');
+        assert(typeof window.__store.chatgpt_rtl_mode === 'object', 'old string storage should migrate to a record');
+
+        // Repeated scans and their observer callbacks must settle, even for RTL
+        // prose whose dir/style values are already set.
+        const stableText = document.getElementById('hebrew');
+        const changes = [];
+        const stabilityObserver = new MutationObserver((records) => changes.push(...records));
+        stabilityObserver.observe(stableText, { attributes: true, attributeFilter: ['dir', 'style'] });
+        window.__CHATGPT_RTL_CORE__.scanAdded(stableText);
+        window.__CHATGPT_RTL_CORE__.scanAdded(stableText);
+        await sleep(300);
+        const firstCount = changes.length;
+        await sleep(300);
+        stabilityObserver.disconnect();
+        assert(firstCount === 0 && changes.length === 0,
+          `unchanged RTL prose must not produce mutations or an endless scan loop (got ${changes.length})`);
+
+        const host = document.getElementById('chatgpt-rtl-toggle-host');
+        const send = document.getElementById('send');
+        assert(host?.dataset.placement === 'inline', 'toggle should mount inline');
+        assert(host.nextSibling === send, 'toggle should mount immediately before send');
+        assert(document.getElementById('prompt-textarea').hasAttribute('data-chatgpt-rtl-composer'), 'composer should be positively marked');
+
+        assert(getComputedStyle(document.getElementById('assistant-root')).direction === 'rtl', 'assistant root should be RTL in RTL mode');
+        for (const id of ['user-text','hebrew','mixed-inline','trailing-dot','trailing-q','trailing-excl','screenshot-a','screenshot-b','screenshot-c','screenshot-d','direct','li','trailing-li','combined-user','combined-assistant']) {
+          assert(getComputedStyle(document.getElementById(id)).direction === 'rtl', `${id} should be RTL`);
+        }
+        assert(getComputedStyle(document.getElementById('mixed-inline')).unicodeBidi === 'isolate', 'prose should use unicode-bidi: isolate');
+        assert(getComputedStyle(document.getElementById('strong-word')).direction === 'rtl', 'strong word should stay RTL');
+
+        const getVisualText = (el) => {
+          const textNodes = [];
+          const walk = (n) => { if (n.nodeType === Node.TEXT_NODE) textNodes.push(n); else n.childNodes.forEach(walk); };
+          walk(el);
+          const rects = [];
+          for (const tn of textNodes) {
+            for (let i = 0; i < tn.textContent.length; i++) {
+              const char = tn.textContent[i];
+              if (char === '\u200F') continue;
+              const r = document.createRange();
+              r.setStart(tn, i);
+              r.setEnd(tn, i + 1);
+              rects.push({ char: char, left: Math.round(r.getBoundingClientRect().left) });
+            }
+          }
+          rects.sort((a,b) => a.left - b.left);
+          return rects.map(x => x.char).join('');
+        };
+
+        const assertInlineFlow = () => {
+          const example = document.getElementById('given-example');
+          const runs = Array.from(example.children).slice(0, 3).map(el => {
+            const node = el.tagName === 'STRONG' ? el.firstChild.firstChild : el.firstChild;
+            const range = document.createRange();
+            range.setStart(node, node.textContent.search(/\S/));
+            range.setEnd(node, node.textContent.trimEnd().length);
+            return range.getBoundingClientRect();
+          });
+          assert(runs[0].left < runs[1].left && runs[1].left < runs[2].left,
+            'English sentence with bold spans must retain I recommend / be given / another chance order');
+          assert(runs[1].left - runs[0].right > 2, 'space before be given must remain visible');
+          assert(runs[2].left - runs[1].right > 2, 'space after be given must remain visible');
+          for (const id of ['growing-translation', 'given-translation']) {
+            const p = document.getElementById(id);
+            const span = p.querySelector('span');
+            const node = span.firstChild;
+            const range = document.createRange();
+            // The final non-space character is =. Its left edge must be
+            // separated from the RTL bdi's right edge by the source space.
+            range.setStart(node, node.length - 2);
+            range.setEnd(node, node.length - 1);
+            const equal = range.getBoundingClientRect();
+            const hebrew = p.querySelector('bdi').getBoundingClientRect();
+            assert(Math.max(equal.left - hebrew.right, hebrew.left - equal.right) > 2,
+              `${id}: space between = and Hebrew must remain visible`);
+          }
+        };
+        assertInlineFlow();
+        const assertEnglishLine = (id, expected) => {
+          const p = document.getElementById(id);
+          const chars = [];
+          for (const el of p.children) {
+            if (el.tagName === 'BR') break;
+            const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+            while (walker.nextNode()) {
+              const node = walker.currentNode;
+              for (let i = 0; i < node.length; i++) {
+                const char = node.nodeValue[i];
+                if (/\s|\u200F/.test(char)) continue;
+                const range = document.createRange();
+                range.setStart(node, i);
+                range.setEnd(node, i + 1);
+                const rect = range.getBoundingClientRect();
+                chars.push({ char, x: rect.left, y: Math.round(rect.top) });
+              }
+            }
+          }
+          chars.sort((a, b) => a.y - b.y || a.x - b.x);
+          assert(chars.map(c => c.char).join('') === expected.replace(/\s/g, ''),
+            `${id}: English words and final period must retain visual order`);
+        };
+        const assertEnglishExamples = () => {
+          assertEnglishLine('given-example', 'I recommend that he be given another chance.');
+          assertEnglishLine('given-valid-example', 'Children are given vitamins.');
+        };
+        assertEnglishExamples();
+        const sourceExample = 'I recommend that he be given another chance.אני ממליץ שתינתן לו הזדמנות נוספת.';
+        assert(document.getElementById('given-example').textContent === sourceExample,
+          'bilingual example must not gain invisible punctuation marks');
+        const example = document.getElementById('given-example');
+        example.style.width = '240px';
+        assertEnglishExamples();
+        example.style.removeProperty('width');
+
+        assert(getVisualText(document.getElementById('trailing-dot')).startsWith('.selector'), 'period must render at far left');
+        assert(getVisualText(document.getElementById('trailing-q')).startsWith('?geographic subset'), 'question mark must render at far left');
+        assert(getVisualText(document.getElementById('trailing-excl')).startsWith('!filing'), 'exclamation mark must render at far left');
+        assert(getVisualText(document.getElementById('trailing-li')).startsWith('?geographic subset'), 'list item question mark must render at far left');
+        assert(getVisualText(document.getElementById('screenshot-a')).startsWith('.Database'), 'screenshot A: period must render at far left of Database');
+        assert(getVisualText(document.getElementById('screenshot-b')).startsWith('?Chrome'), 'screenshot B: question mark must render at far left of Chrome');
+        assert(getVisualText(document.getElementById('screenshot-c')).startsWith('.2733'), 'screenshot C: period must render at far left of 2733');
+        assert(getVisualText(document.getElementById('screenshot-d')).startsWith('?3884934'), 'screenshot D: question mark must render at far left of 3884934');
+
+        const strongEl = document.getElementById('strong-word');
+        const textBefore = strongEl.previousSibling;
+        const rZeh = document.createRange();
+        rZeh.setStart(textBefore, textBefore.textContent.length - 2);
+        rZeh.setEnd(textBefore, textBefore.textContent.length - 1);
+        const spaceWidth = Math.round(rZeh.getBoundingClientRect().left - strongEl.getBoundingClientRect().right);
+        assert(spaceWidth > 0, 'space before strong word must be preserved');
+        assert(getComputedStyle(document.getElementById('inline-code')).direction === 'ltr', 'inline code should stay LTR');
+        assert(getComputedStyle(document.getElementById('inline-code-mixed')).direction === 'ltr', 'mixed inline code should stay LTR');
+        assert(getComputedStyle(document.getElementById('inline-code-mixed')).unicodeBidi === 'isolate', 'inline code should be isolated');
+        assert(getComputedStyle(document.getElementById('pre')).direction === 'ltr', 'pre should stay LTR');
+        assert(getComputedStyle(document.getElementById('math')).direction === 'ltr', 'math should stay LTR');
+        assert(getComputedStyle(document.getElementById('table')).direction === 'ltr', 'table structure should stay LTR');
+        assert(getComputedStyle(document.getElementById('th')).direction === 'rtl', 'table prose should be RTL');
+        assert(getComputedStyle(document.getElementById('th')).textAlign === 'center', 'table th should be centered');
+        assert(getComputedStyle(document.getElementById('td')).textAlign === 'center', 'table td should be centered');
+
+        assert(document.getElementById('pure-en').getAttribute('data-chatgpt-rtl-text') === 'ltr', 'pure English prose should be marked LTR');
+        assert(getComputedStyle(document.getElementById('pure-en')).direction === 'ltr', 'pure English prose should be LTR direction');
+        assert(getVisualText(document.getElementById('pure-en')).endsWith('.'), 'pure English paragraph must have period at far right');
+        assert(getVisualText(document.getElementById('pure-en-head')).endsWith(':'), 'pure English heading must have colon at far right');
+
+        assert(document.getElementById('hebrew-arrows').textContent.includes('←'), 'Hebrew flow arrows must be converted to leftwards in RTL');
+        assert(document.getElementById('hebrew-double-arrow').textContent.includes('⇐'), 'Hebrew implication arrow must be converted to leftwards in RTL');
+        assert(document.getElementById('inline-code-arrow').textContent.includes('→'), 'code arrows must remain rightwards');
+        assert(document.getElementById('table-arrow').textContent.includes('←'), 'table cell Hebrew arrow must be converted to leftwards');
+
+        assert(document.getElementById('list').hasAttribute('data-chatgpt-rtl-list'), 'list should be marked');
+        assert(document.getElementById('nested-list').hasAttribute('data-chatgpt-rtl-list'), 'nested list should be marked');
+        assert(document.getElementById('table').hasAttribute('data-chatgpt-rtl-table'), 'table should be marked');
+        assert(document.getElementById('url').hasAttribute('data-chatgpt-rtl-island'), 'link should be isolated');
+        assert(!document.getElementById('status').hasAttribute('data-chatgpt-rtl-text'), 'status must not be prose');
+        assert(!document.getElementById('citation').hasAttribute('data-chatgpt-rtl-text'), 'citation must not be prose');
+        assert(!document.getElementById('role-label').hasAttribute('data-chatgpt-rtl-text'), 'screen-reader role label must not be prose');
+        assert(getComputedStyle(document.getElementById('sidebar-search')).direction === 'ltr', 'sidebar search must not be composer');
+
+        host.shadowRoot.querySelector('button').click();
+        await sleep(80);
+        assert(document.documentElement.dataset.chatgptRtlMode === 'ltr', 'UI button should toggle LTR');
+        assertInlineFlow();
+        assertEnglishExamples();
+        assert(getComputedStyle(document.getElementById('assistant-root')).direction === 'ltr', 'assistant root should switch LTR');
+        assert(getComputedStyle(document.getElementById('hebrew')).direction === 'ltr', 'prose should switch LTR');
+        assert(getComputedStyle(document.getElementById('prompt-textarea')).direction === 'ltr', 'composer should switch LTR');
+        assert(document.getElementById('hebrew-arrows').textContent.includes('→'), 'Hebrew arrows must revert to rightwards in LTR mode');
+        assert(!document.getElementById('screenshot-a').textContent.includes('\u200F'), 'RLM must be removed on LTR toggle');
+        assert(!document.getElementById('screenshot-c').textContent.includes('\u200F'), 'RLM must be removed on LTR toggle for numbers');
+        await window.__emitExtensionMessage({ type: 'chatgpt-rtl:toggle' });
+        await sleep(80);
+        assert(document.documentElement.dataset.chatgptRtlMode === 'rtl', 'toolbar message path should toggle back RTL');
+        assertInlineFlow();
+        assertEnglishExamples();
+        // Streaming may insert or update an inline span directly, rather than
+        // delivering its entire parent paragraph to the content scanner.
+        const inlineStream = document.getElementById('given-example').firstElementChild;
+        inlineStream.firstChild.nodeValue = 'I recommend that he really ';
+        await sleep(180);
+        assert(!inlineStream.hasAttribute('data-chatgpt-rtl-text'), 'streamed inline spans must not become prose islands');
+        assertEnglishLine('given-example', 'I recommend that he really be given another chance.');
+        inlineStream.firstChild.nodeValue = 'I recommend that he ';
+        await sleep(180);
+        assertInlineFlow();
+        assert(document.getElementById('hebrew-arrows').textContent.includes('←'), 'Hebrew arrows must re-convert to leftwards on toggle back');
+        assert(getVisualText(document.getElementById('screenshot-a')).startsWith('.Database'), 'screenshot A must re-anchor on toggle back');
+        assert(getVisualText(document.getElementById('screenshot-c')).startsWith('.2733'), 'screenshot C must re-anchor on toggle back');
+
+        send.dataset.testid = 'stop-button';
+        send.setAttribute('aria-label', 'Stop generating');
+        await sleep(250);
+        assert(host.nextSibling === send, 'toggle should remain next to Stop instead of jumping to an unrelated control');
+        delete send.dataset.testid;
+        send.dataset.testid = 'composer-send-button';
+        send.setAttribute('aria-label', 'Send message');
+        await sleep(250);
+        assert(host.nextSibling === send, 'toggle should stay next to Send after streaming ends');
+
+        // A rich composer may contain large code/link documents. They belong
+        // to the editor and must never be marked as conversation content.
+        const editor = document.getElementById('prompt-textarea');
+        const editorBlock = document.createElement('p');
+        editorBlock.innerHTML = 'טיוטה <code>code</code> <a href="#">link</a>';
+        editor.appendChild(editorBlock);
+        window.__CHATGPT_RTL_CORE__.scanConversation(document);
+        await sleep(180);
+        assert(!editorBlock.hasAttribute('data-chatgpt-rtl-text'), 'composer prose must not be scanned');
+        assert(!editorBlock.querySelector('code').hasAttribute('data-chatgpt-rtl-technical'), 'composer code must not be marked');
+        assert(!editorBlock.querySelector('a').hasAttribute('data-chatgpt-rtl-island'), 'composer links must not be marked');
+        const inlineEdit = document.createElement('div');
+        inlineEdit.setAttribute('data-user-message-bubble', '');
+        inlineEdit.innerHTML = '<div contenteditable="true"><p dir="auto">טיוטה</p></div>';
+        document.getElementById('conversation').appendChild(inlineEdit);
+        window.__CHATGPT_RTL_CORE__.scanConversation(document);
+        assert(inlineEdit.querySelector('p').getAttribute('dir') === 'auto', 'inline editor direction must not be rewritten');
+        assert(!inlineEdit.querySelector('p').hasAttribute('data-chatgpt-rtl-text'), 'inline editor content must not be marked');
+        inlineEdit.remove();
+        editorBlock.remove();
+
+        const streamed = document.createElement('p');
+        streamed.id = 'streamed';
+        streamed.appendChild(document.createTextNode(''));
+        document.getElementById('assistant-root').appendChild(streamed);
+        for (let i = 0; i < 40; i += 1) streamed.firstChild.nodeValue += 'א';
+        await sleep(220);
+        assert(streamed.hasAttribute('data-chatgpt-rtl-text'), 'streamed paragraph should be marked after burst mutations');
+        assert(getComputedStyle(streamed).direction === 'rtl', 'streamed paragraph should be RTL');
+
+        // A large streamed turn should converge after a burst and a partial edit.
+        const large = document.createElement('section');
+        large.dataset.turn = 'assistant';
+        large.innerHTML = '<div data-assistant-markdown>' + Array.from({length: 80},
+          (_, i) => `<p>שורה ${i} mixed text.</p>`).join('') + '</div>';
+        document.getElementById('conversation').appendChild(large);
+        await sleep(180);
+        const changed = large.querySelector('p');
+        const fullScanClosest = Element.prototype.closest;
+        let fullScanCalls = 0;
+        Element.prototype.closest = function (...args) {
+          fullScanCalls += 1;
+          return fullScanClosest.apply(this, args);
+        };
+        window.__CHATGPT_RTL_CORE__.scanConversation(large);
+        Element.prototype.closest = fullScanClosest;
+        assert(fullScanCalls < 500, `full scan should avoid duplicate prose visits (closest calls: ${fullScanCalls})`);
+        const originalClosest = Element.prototype.closest;
+        let closestCalls = 0;
+        Element.prototype.closest = function (...args) {
+          closestCalls += 1;
+          return originalClosest.apply(this, args);
+        };
+        changed.firstChild.nodeValue += ' תוספת';
+        await sleep(180);
+        Element.prototype.closest = originalClosest;
+        assert(changed.getAttribute('dir') === 'rtl', 'partial streaming update should remain RTL');
+        assert(closestCalls < 80, `partial update should not rescan all 80 paragraphs (closest calls: ${closestCalls})`);
+        // Many independent streaming updates must not cause quadratic queue reduction.
+        const originalContains = Element.prototype.contains;
+        let containsCalls = 0;
+        Element.prototype.contains = function (...args) {
+          containsCalls += 1;
+          return originalContains.apply(this, args);
+        };
+        for (const paragraph of large.querySelectorAll('p')) paragraph.firstChild.nodeValue += ' עדכון';
+        await sleep(180);
+        Element.prototype.contains = originalContains;
+        assert(containsCalls < 2000, `queue reduction must not compare every pair (contains calls: ${containsCalls})`);
+        changed.firstChild.nodeValue = 'English text';
+        await sleep(120);
+        assert(changed.getAttribute('data-chatgpt-rtl-text') === 'ltr', 'later updates must reconsider direction');
+        changed.firstChild.nodeValue = 'חזרה לעברית';
+        await sleep(120);
+        assert(changed.getAttribute('dir') === 'rtl', 'later RTL updates must be reprocessed');
+        const stableChanges = [];
+        const largeObserver = new MutationObserver((records) => stableChanges.push(...records));
+        largeObserver.observe(large, { attributes: true, childList: true, characterData: true, subtree: true });
+        await sleep(200);
+        largeObserver.disconnect();
+        assert(stableChanges.length === 0, `large turn must settle at idle (got ${stableChanges.length})`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+        await sleep(100);
+        assert(changed.getAttribute('dir') === 'rtl', 'SPA navigation scan should preserve RTL');
+        large.remove();
+
+        const generic = document.createElement('section');
+        generic.dataset.turn = 'assistant';
+        generic.id = 'generic-turn';
+        generic.innerHTML = '<div><ul id="generic-list"><li id="generic-li">כללי</li></ul><table id="generic-table"><tr><td id="generic-td">תא</td></tr></table></div>';
+        document.getElementById('conversation').appendChild(generic);
+        await sleep(180);
+        assert(document.getElementById('generic-list').hasAttribute('data-chatgpt-rtl-list'), 'generic turn list should be marked');
+        assert(document.getElementById('generic-table').hasAttribute('data-chatgpt-rtl-table'), 'generic turn table should be marked');
+        // Partial nested changes still update the enclosing prose and cell.
+        const dynamicText = document.createElement('p');
+        dynamicText.innerHTML = '<span>English text</span>';
+        document.getElementById('assistant-root').appendChild(dynamicText);
+        const dynamicCell = document.getElementById('generic-td');
+        dynamicCell.innerHTML = '<span>עברית → Database.</span>';
+        await sleep(180);
+        dynamicText.firstElementChild.firstChild.nodeValue = 'טקסט עברי';
+        dynamicCell.firstElementChild.firstChild.nodeValue = 'עוד עברית → Database.';
+        await sleep(180);
+        assert(dynamicText.getAttribute('dir') === 'rtl', 'nested streaming must update the enclosing paragraph direction');
+        assert(dynamicCell.textContent.includes('←'), 'partial table-cell updates must normalize RTL arrows');
+        assert(dynamicCell.textContent.includes('\u200F'), 'partial table-cell updates must anchor trailing punctuation');
+        dynamicText.remove();
+        const directTurn = document.createElement('section');
+        directTurn.dataset.turn = 'assistant';
+        directTurn.innerHTML = '<div data-assistant-markdown>English <span>words</span></div>';
+        document.getElementById('conversation').appendChild(directTurn);
+        await sleep(120);
+        const directRoot = directTurn.firstElementChild;
+        directRoot.firstElementChild.firstChild.nodeValue = 'עברית';
+        await sleep(120);
+        assert(directRoot.getAttribute('dir') === 'rtl', 'streaming inside a direct-text message must update its enclosing direction');
+        directTurn.remove();
+        assert(getComputedStyle(document.getElementById('generic-li')).direction === 'rtl', 'generic list item should be RTL');
+        assert(getComputedStyle(document.getElementById('generic-td')).direction === 'rtl', 'generic table cell should be RTL');
+
+        document.getElementById('composer-form').remove();
+        const shell = document.createElement('section');
+        shell.id = 'new-shell';
+        shell.innerHTML = '<form data-chatgpt-composer><div data-composer-markdown="true" contenteditable="true" role="textbox" id="new-editor" style="width:500px;height:40px">חדש</div></form><div data-testid="composer-trailing-actions"><button aria-label="Voice mode">V</button><button data-composer-submit id="new-send">S</button></div>';
+        document.getElementById('main').appendChild(shell);
+        await sleep(350);
+        assert(host.nextSibling?.id === 'new-send', 'toggle should follow sibling toolbar send control');
+        assert(document.getElementById('new-editor').hasAttribute('data-chatgpt-rtl-composer'), 'replacement composer should be marked');
+
+        const dictationBtn = document.createElement('button');
+        dictationBtn.setAttribute('data-start-dictation', 'true');
+        dictationBtn.id = 'dictation-btn';
+        document.querySelector('[data-testid="composer-trailing-actions"]').insertBefore(dictationBtn, document.getElementById('new-send'));
+        await sleep(250);
+        assert(host.nextSibling === dictationBtn, 'toggle should mount immediately before dictation button when present');
+        // The preferred control is already known; placement should not scan
+        // for lower-priority Send, Stop or trailing fallbacks as well.
+        window.__placementCalls.send = window.__placementCalls.stop = window.__placementCalls.trailing = 0;
+        document.getElementById('new-editor').focus();
+        await sleep(180);
+        assert(window.__placementCalls.send === 0 && window.__placementCalls.stop === 0 && window.__placementCalls.trailing === 0,
+          `placement should skip unused fallbacks: ${JSON.stringify(window.__placementCalls)}`);
+        dictationBtn.remove();
+        document.getElementById('new-send').remove();
+        await sleep(250);
+        const trailingVoice = document.querySelector('[data-testid="composer-trailing-actions"] button');
+        assert(host.nextSibling === trailingVoice, 'placement should fall back to a trailing control when preferred buttons disappear');
+
+        shell.remove();
+        await sleep(300);
+        assert(host.dataset.placement === 'floating' && host.parentElement === document.body, 'read-only conversation should get floating fallback');
+
+        document.getElementById('conversation').remove();
+        await sleep(300);
+        assert(!document.getElementById('chatgpt-rtl-toggle-host'), 'non-chat page should remove floating toggle');
+
+        const lateConversation = document.createElement('section');
+        lateConversation.dataset.turn = 'assistant';
+        lateConversation.innerHTML = '<p id="late-p">שיחה שנוספה מאוחר</p>';
+        document.getElementById('main').appendChild(lateConversation);
+        await sleep(300);
+        const lateHost = document.getElementById('chatgpt-rtl-toggle-host');
+        assert(lateHost?.dataset.placement === 'floating', 'late read-only conversation should create floating toggle');
+        assert(getComputedStyle(document.getElementById('late-p')).direction === 'rtl', 'late conversation prose should be RTL');
+
+        document.getElementById('results').textContent = 'PASS';
+      } catch (error) {
+        document.getElementById('results').textContent = 'FAIL: ' + (error?.stack || error);
+      }
+    })();
+  </script>
+</body>
+</html>
