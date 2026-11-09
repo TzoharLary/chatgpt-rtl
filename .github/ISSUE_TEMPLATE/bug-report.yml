@@ -1,0 +1,45 @@
+name: דיווח על תקלה
+description: דווחו על בעיה בתוסף כדי שנוכל לשחזר אותה.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: הדיווח פומבי. השתמשו בדוגמה שאפשר לשתף והסירו מידע אישי או פרטי שיחה מצילומי מסך.
+  - type: input
+    id: extension-version
+    attributes:
+      label: גרסת התוסף
+      description: מופיעה בפרטי התוסף במסך התוספים של Chrome.
+    validations:
+      required: true
+  - type: input
+    id: chrome-version
+    attributes:
+      label: גרסת Chrome
+      description: מופיעה בעמוד chrome://version.
+    validations:
+      required: true
+  - type: dropdown
+    id: direction
+    attributes:
+      label: כיוון הטקסט בזמן התקלה
+      options:
+        - מימין לשמאל (RTL)
+        - משמאל לימין (LTR)
+        - בשני המצבים
+        - לא ידוע או לא רלוונטי
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: צעדים לשחזור
+      description: מה עשיתם לפני שהתקלה הופיעה?
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: מה קרה ומה ציפיתם שיקרה?
+    validations:
+      required: true
