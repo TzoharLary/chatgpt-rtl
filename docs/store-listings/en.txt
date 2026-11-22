@@ -1,0 +1,9 @@
+Read and write in Arabic, Hebrew, and Persian in ChatGPT with right-to-left (RTL) text direction.
+
+ChatGPT RTL adds a direction toggle to conversations and the message box. Switch between RTL and left-to-right (LTR) using the in-page button, the extension toolbar icon, or Alt+Shift+X (Option+Shift+X on Mac). It handles mixed-language text, lists, tables, links, code, and math. Code and math keep their left-to-right direction.
+
+The extension processes ChatGPT page content locally in your browser to apply direction and styling. It does not save or transmit conversation content and has no analytics or backend service. Your direction preference and an update timestamp are saved in Chrome local and sync storage. Chrome Sync may synchronize this preference when enabled.
+
+Site access is limited to chatgpt.com and chat.openai.com. The storage permission remembers and synchronizes your direction preference.
+
+ChatGPT RTL is an independent extension and is not affiliated with or endorsed by OpenAI.

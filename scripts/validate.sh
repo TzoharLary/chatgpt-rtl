@@ -9,8 +9,15 @@ from pathlib import Path
 
 manifest = json.loads(Path('manifest.json').read_text())
 assert manifest['manifest_version'] == 3
-assert manifest['name'] == 'RTL for ChatGPT'
-assert manifest['version'] == '0.6.7'
+assert manifest['name'] == '__MSG_extensionName__'
+assert manifest['default_locale'] == 'en'
+for locale in ('en', 'he', 'ar', 'fa'):
+    messages = json.loads(Path(f'_locales/{locale}/messages.json').read_text())
+    assert messages['extensionName']['message'] == 'ChatGPT RTL'
+    assert 0 < len(messages['extensionDescription']['message']) <= 132
+    for field in (manifest['name'], manifest['description'], manifest['action']['default_title'], manifest['commands']['toggle-rtl']['description']):
+        assert messages[field[6:-2]]['message'], (locale, field)
+assert manifest['version'] == '0.6.8'
 assert len(manifest['description']) <= 132
 assert manifest['permissions'] == ['storage'], manifest['permissions']
 assert 'host_permissions' not in manifest, 'unexpected host_permissions declaration'

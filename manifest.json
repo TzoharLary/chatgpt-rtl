@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "RTL for ChatGPT",
-  "short_name": "RTL Helper",
-  "version": "0.6.7",
-  "description": "One-click RTL/LTR for ChatGPT conversations and composer, with safe handling for code, math, lists, links, and tables.",
+  "name": "__MSG_extensionName__",
+  "short_name": "ChatGPT RTL",
+  "version": "0.6.8",
+  "description": "__MSG_extensionDescription__",
   "permissions": [
     "storage"
   ],
@@ -11,7 +11,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Toggle ChatGPT RTL/LTR",
+    "default_title": "__MSG_actionTitle__",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -45,7 +45,8 @@
         "default": "Alt+Shift+X",
         "mac": "Alt+Shift+X"
       },
-      "description": "Toggle RTL/LTR direction"
+      "description": "__MSG_toggleCommand__"
     }
-  }
+  },
+  "default_locale": "en"
 }

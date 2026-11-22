@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "ChatGPT RTL"
+  },
+  "extensionDescription": {
+    "message": "Switch ChatGPT chats and the message box between RTL and LTR for Arabic, Hebrew, and Persian."
+  },
+  "actionTitle": {
+    "message": "Toggle ChatGPT RTL/LTR"
+  },
+  "toggleCommand": {
+    "message": "Toggle RTL/LTR direction"
+  }
+}

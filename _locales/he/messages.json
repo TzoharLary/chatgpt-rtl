@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "ChatGPT RTL"
+  },
+  "extensionDescription": {
+    "message": "החליפו כיוון בשיחות ובשדה ההקלדה ב־ChatGPT בין ימין לשמאל לשמאל לימין, בעברית, בערבית ובפרסית."
+  },
+  "actionTitle": {
+    "message": "החלפת כיוון ב־ChatGPT"
+  },
+  "toggleCommand": {
+    "message": "החלפה בין ימין לשמאל לשמאל לימין"
+  }
+}
