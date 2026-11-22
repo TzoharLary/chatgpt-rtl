@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "ChatGPT RTL"
+  },
+  "extensionDescription": {
+    "message": "جهت گفتگوها و کادر نوشتن در ChatGPT را برای فارسی، عربی و عبری بین راست‌به‌چپ و چپ‌به‌راست تغییر دهید."
+  },
+  "actionTitle": {
+    "message": "تغییر جهت متن در ChatGPT"
+  },
+  "toggleCommand": {
+    "message": "تغییر جهت راست‌به‌چپ و چپ‌به‌راست"
+  }
+}

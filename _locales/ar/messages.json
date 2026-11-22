@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "ChatGPT RTL"
+  },
+  "extensionDescription": {
+    "message": "بدّل اتجاه المحادثات وحقل الكتابة في ChatGPT بين اليمين واليسار عند استخدام العربية أو العبرية أو الفارسية."
+  },
+  "actionTitle": {
+    "message": "تبديل اتجاه النص في ChatGPT"
+  },
+  "toggleCommand": {
+    "message": "التبديل بين اتجاهي الكتابة"
+  }
+}

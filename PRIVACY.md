@@ -1,6 +1,6 @@
-# Privacy Policy — RTL for ChatGPT
+# Privacy Policy — ChatGPT RTL
 
-RTL for ChatGPT is designed to run entirely in the browser.
+ChatGPT RTL is designed to run entirely in the browser.
 
 ## Data collection
 
